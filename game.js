@@ -1234,37 +1234,75 @@ export const Game = {
     },
     
     async cancelOrder(orderId) {
-        if (!this.state?.orders) return false;
+    if (!this.state?.orders) return false;
+    
+    const orderIndex = this.state.orders.findIndex(o => o.id == orderId);
+    if (orderIndex === -1) return false;
+    
+    const order = this.state.orders[orderIndex];
+    
+    if (order.status === 'delivered') return false;
+    
+    const refundAmount = order.total_cost;
+    this.state.balance += refundAmount;
+    
+    // Удаляем расходную транзакцию из журнала, если она там есть
+    const originalTransactionIndex = this.state.transactions.findIndex(t => 
+        t.description && t.description.includes('Заказ у поставщика') && 
+        t.description.includes(order.supplier_name) &&
+        t.amount === order.total_cost &&
+        t.category === 'expense'
+    );
+    
+    if (originalTransactionIndex !== -1) {
+        // Удаляем расход из транзакций
+        this.state.transactions.splice(originalTransactionIndex, 1);
         
-        const orderIndex = this.state.orders.findIndex(o => o.id == orderId);
-        if (orderIndex === -1) return false;
+        // Также удаляем из transactionHistory для статистики
+        const historyIndex = this.state.transactionHistory.findIndex(t => 
+            t.description && t.description.includes('Заказ у поставщика') && 
+            t.description.includes(order.supplier_name) &&
+            t.amount === order.total_cost &&
+            t.category === 'expense'
+        );
+        if (historyIndex !== -1) {
+            this.state.transactionHistory.splice(historyIndex, 1);
+        }
         
-        const order = this.state.orders[orderIndex];
-        
-        if (order.status === 'delivered') return false;
-        
-        const refundAmount = order.total_cost;
-        this.state.balance += refundAmount;
-        
-        this.state.transactions.unshift({
-            timestamp: new Date().toISOString(),
-            amount: refundAmount,
-            description: `🔄 Отмена заказа у ${order.supplier_name} (возврат ${this.formatMoney(refundAmount)} ₽)`,
-            category: 'income',
-            subcategory: 'refund'
-        });
-        
-        this.state.orders.splice(orderIndex, 1);
-        
-        if (this.state.transactions.length > 500) this.state.transactions.pop();
-        if (this.state.transactionHistory.length > 5000) this.state.transactionHistory.pop();
-        
-        await this.forceSave();
-        UI.renderOrders(this.state);
-        UI.updateFinanceUI(this.state);
-        
-        return true;
-    },
+        // Возвращаем деньги обратно в totalExpenseEver
+        this.state.totalExpenseEver -= order.total_cost;
+    }
+    
+    // Добавляем запись об отмене (информационная, не влияет на расходы)
+    this.state.transactions.unshift({
+        timestamp: new Date().toISOString(),
+        amount: refundAmount,
+        description: `🔄 Отмена заказа у ${order.supplier_name} (возврат ${this.formatMoney(refundAmount)} ₽)`,
+        category: 'income',  // ← income, чтобы не влияло на расходы в статистике периода
+        subcategory: 'refund'
+    });
+    
+    // Добавляем в transactionHistory для статистики
+    this.state.transactionHistory.unshift({
+        timestamp: new Date().toISOString(),
+        amount: refundAmount,
+        description: `🔄 Отмена заказа у ${order.supplier_name} (возврат ${this.formatMoney(refundAmount)} ₽)`,
+        category: 'income',
+        subcategory: 'refund'
+    });
+    
+    this.state.orders.splice(orderIndex, 1);
+    
+    if (this.state.transactions.length > 500) this.state.transactions.pop();
+    if (this.state.transactionHistory.length > 5000) this.state.transactionHistory.pop();
+    
+    await this.forceSave();
+    UI.renderOrders(this.state);
+    UI.updateFinanceUI(this.state);
+    UI.renderLogs(this.state);
+    
+    return true;
+}
     
     async updateTax(percent) {
         if (!isNaN(percent) && percent >= 0 && percent <= 100) {
