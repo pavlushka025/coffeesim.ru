@@ -323,8 +323,8 @@ export const UI = {
             <div class="item-main">
                 <div class="item-title">${this.escapeHtml(ing.name)}</div>
                 <div class="item-sub">📦 <span class="stock-val">${stockDisplay}</span> ${ing.unit}</div>
-                <div class="item-sub">💰 Закупка: ${Game.formatMoney(ing.currentBuyPrice)} ₽/${ing.unit}</div>
-                <div class="item-sub">📊 Средняя с/с остатка: <span class="avgcost-val">${Game.formatMoney(avgCost)}</span> ₽/${ing.unit}</div>
+               <div class="item-sub">💰 Закупка: ${ing.stock <= 0 ? '—' : Game.formatMoney(ing.currentBuyPrice) + ' ₽/' + ing.unit}</div>
+               <div class="item-sub">📊 Средняя с/с остатка: ${ing.stock <= 0 ? '—' : Game.formatMoney(avgCost) + ' ₽/' + ing.unit}</div>
             </div>
             <div class="btn-group">
                 <button class="buy-ing btn-green btn-sm" data-id="${ing.id}" data-name="${this.escapeHtml(ing.name)}" data-unit="${ing.unit}">📦 Заказать у поставщиков</button>
