@@ -144,7 +144,6 @@ window.openAddIngredientModal = async function() {
         return;
     }
     
-    // Очищаем поля
     document.getElementById('newIngName').value = '';
     document.getElementById('newIngType').value = 'ingredient';
     document.getElementById('newIngUnit').value = 'шт';
@@ -152,7 +151,6 @@ window.openAddIngredientModal = async function() {
     document.getElementById('newIngPrice').value = 0;
     document.getElementById('newIngThreshold').value = 1;
     
-    // Сбрасываем поля нового поставщика
     document.getElementById('newSupplierName').value = '';
     document.getElementById('newSupplierDeliveryCost').value = 500;
     document.getElementById('newSupplierFreeFrom').value = 50;
@@ -160,7 +158,6 @@ window.openAddIngredientModal = async function() {
     document.getElementById('newSupplierTimeMax').value = 180;
     document.getElementById('newSupplierFields').style.display = 'none';
     
-    // Загружаем список существующих поставщиков
     const supplierSelect = document.getElementById('newIngSupplier');
     if (supplierSelect && Game.state?.suppliers) {
         supplierSelect.innerHTML = '<option value="new">➕ Создать нового поставщика...</option>';
@@ -172,20 +169,14 @@ window.openAddIngredientModal = async function() {
         }
     }
     
-    // Обработчик изменения выбора поставщика
     supplierSelect.onchange = function() {
         const fields = document.getElementById('newSupplierFields');
-        if (this.value === 'new') {
-            fields.style.display = 'block';
-        } else {
-            fields.style.display = 'none';
-        }
+        fields.style.display = this.value === 'new' ? 'block' : 'none';
     };
     
     modal.classList.add('active');
 };
 
-// Обработчик подтверждения добавления ингредиента
 document.getElementById('confirmAddIngredientBtn')?.addEventListener('click', async () => {
     const name = document.getElementById('newIngName').value.trim();
     const type = document.getElementById('newIngType').value;
@@ -201,7 +192,6 @@ document.getElementById('confirmAddIngredientBtn')?.addEventListener('click', as
         return;
     }
     
-    // Если выбран "новый поставщик" — создаём его
     let supplierId = null;
     if (supplierValue === 'new') {
         const newSupplierName = document.getElementById('newSupplierName').value.trim();
@@ -238,7 +228,6 @@ document.getElementById('confirmAddIngredientBtn')?.addEventListener('click', as
         supplierId = parseInt(supplierValue);
     }
     
-    // Добавляем ингредиент
     const res = await fetch('add_ingredient.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -254,7 +243,6 @@ document.getElementById('confirmAddIngredientBtn')?.addEventListener('click', as
     const data = await res.json();
     
     if (data.success) {
-        // Привязываем ингредиент к поставщику
         await fetch('add_supplier_item.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -271,7 +259,6 @@ document.getElementById('confirmAddIngredientBtn')?.addEventListener('click', as
         UI.showAutoMessage(`✅ Ингредиент "${name}" добавлен`, 'success');
         document.getElementById('addIngredientModal').classList.remove('active');
         
-        // Обновляем игру
         const gameData = await API.loadGame();
         Game.updateState(gameData);
     } else {
@@ -290,7 +277,6 @@ function initAdminPanel() {
     
     adminBtn.style.display = 'inline-flex';
     
-    // Загружаем сохранённые настройки видимости кнопок
     const buyAllBtn = document.getElementById('buyAllIngredientsBtn');
     const addIngredientBtn = document.getElementById('addIngredientBtn');
     const toggleBuyAll = document.getElementById('toggleBuyAllBtn');
@@ -301,7 +287,6 @@ function initAdminPanel() {
         const isVisible = saved === 'true';
         buyAllBtn.style.display = isVisible ? 'inline-flex' : 'none';
         toggleBuyAll.checked = isVisible;
-        
         toggleBuyAll.addEventListener('change', (e) => {
             buyAllBtn.style.display = e.target.checked ? 'inline-flex' : 'none';
             localStorage.setItem('showBuyAllBtn', e.target.checked);
@@ -313,18 +298,15 @@ function initAdminPanel() {
         const isVisible = saved === 'true';
         addIngredientBtn.style.display = isVisible ? 'inline-flex' : 'none';
         toggleAdd.checked = isVisible;
-        
         toggleAdd.addEventListener('change', (e) => {
             addIngredientBtn.style.display = e.target.checked ? 'inline-flex' : 'none';
             localStorage.setItem('showAddIngredientBtn', e.target.checked);
         });
     }
     
-    // Открытие модалки
     adminBtn.onclick = () => {
         if (Game.state) {
             document.getElementById('adminTaxPercent').value = Game.state.taxPercent || 6;
-            
             const rates = Game.state.electricityRates || {};
             document.getElementById('adminRate1Summer').value = rates.summer1 || 6.43;
             document.getElementById('adminRate1Winter').value = rates.winter1 || 7.15;
@@ -334,7 +316,6 @@ function initAdminPanel() {
             document.getElementById('adminRate3Winter').value = rates.winter3 || 13.47;
         }
         
-        // Скрыть дополнительные панели
         document.getElementById('adminPriceEditorContainer').style.display = 'none';
         document.getElementById('adminUsersListContainer').style.display = 'none';
         document.getElementById('adminAllLogsContainer').style.display = 'none';
@@ -343,7 +324,6 @@ function initAdminPanel() {
         document.getElementById('adminSettingsModal').classList.add('active');
     };
     
-    // Сохранение налога (только админ)
     const taxBtn = document.getElementById('adminUpdateTaxBtn');
     if (taxBtn) {
         taxBtn.onclick = async () => {
@@ -355,7 +335,6 @@ function initAdminPanel() {
         };
     }
     
-    // Сохранение тарифов
     const elecBtn = document.getElementById('adminSaveElecRatesBtn');
     if (elecBtn) {
         elecBtn.onclick = async () => {
@@ -389,7 +368,6 @@ function initAdminPanel() {
         };
     }
     
-    // Выдача денег
     document.getElementById('adminAddMoneyBtn')?.addEventListener('click', async () => {
         const username = document.getElementById('adminTargetUsername').value.trim();
         const amount = parseFloat(document.getElementById('adminAddMoneyAmount').value);
@@ -414,7 +392,6 @@ function initAdminPanel() {
         }
     });
     
-    // Сброс игры игрока
     document.getElementById('adminResetGameBtn')?.addEventListener('click', async () => {
         const username = document.getElementById('adminResetUsername').value.trim();
         const balance = parseFloat(document.getElementById('adminResetBalance').value);
@@ -440,7 +417,6 @@ function initAdminPanel() {
         }
     });
     
-    // Список всех игроков
     document.getElementById('adminListUsersBtn')?.addEventListener('click', async () => {
         const container = document.getElementById('adminUsersListContainer');
         const listDiv = document.getElementById('adminUsersList');
@@ -473,7 +449,6 @@ function initAdminPanel() {
         }
     });
     
-    // Глобальное сообщение
     document.getElementById('adminGlobalMessageBtn')?.addEventListener('click', () => {
         const form = document.getElementById('adminGlobalMessageForm');
         form.style.display = form.style.display === 'block' ? 'none' : 'block';
@@ -507,7 +482,6 @@ function initAdminPanel() {
         }
     });
     
-    // Логи всех игроков
     document.getElementById('adminViewAllLogsBtn')?.addEventListener('click', async () => {
         const container = document.getElementById('adminAllLogsContainer');
         const listDiv = document.getElementById('adminAllLogsList');
@@ -538,7 +512,6 @@ function initAdminPanel() {
         }
     });
     
-    // Стартовый баланс
     document.getElementById('adminSaveStartBalanceBtn')?.addEventListener('click', async () => {
         const balance = parseFloat(document.getElementById('adminStartBalance').value);
         if (isNaN(balance) || balance < 1000) {
@@ -560,7 +533,6 @@ function initAdminPanel() {
         }
     });
     
-    // Редакторы цен
     document.getElementById('adminEditIngredientsPricesBtn')?.addEventListener('click', () => {
         showIngredientsPriceEditor();
     });
@@ -569,7 +541,6 @@ function initAdminPanel() {
         showDrinksPriceEditor();
     });
     
-    // Закрытие модалки
     const closeBtn = document.getElementById('closeAdminSettingsModal');
     if (closeBtn) {
         closeBtn.onclick = () => {
@@ -983,17 +954,14 @@ async function checkoutOrder() {
     
     let totalSum = 0;
     let suppliersInfo = [];
-    let allItemsForLog = [];
     
     for (let supplier of currentCart) {
         let supplierTotal = 0;
         let totalUnits = 0;
-        let supplierItemsForLog = [];
         
         for (let item of supplier.items) {
             supplierTotal += item.totalPrice;
             totalUnits += item.quantity;
-            supplierItemsForLog.push(`${item.name}: ${item.quantity} ${item.unit} (${Game.formatMoney(item.totalPrice)} ₽)`);
         }
         
         const supplierData = Game.state?.suppliers?.find(s => s.id === supplier.supplier_id);
@@ -1011,11 +979,8 @@ async function checkoutOrder() {
             items: supplier.items,
             delivery_cost: deliveryCost,
             total_cost: grandTotal,
-            supplier_name: supplier.supplier_name,
-            items_log: supplierItemsForLog
+            supplier_name: supplier.supplier_name
         });
-        
-        allItemsForLog.push(`📦 ${supplier.supplier_name}: ${supplierItemsForLog.join(', ')} (доставка ${deliveryCost === 0 ? 'бесплатно' : Game.formatMoney(deliveryCost) + ' ₽'}) — итого ${Game.formatMoney(grandTotal)} ₽`);
     }
     
     if (Game.state.balance < totalSum) {
@@ -1033,29 +998,18 @@ async function checkoutOrder() {
     }
     
     if (allSuccess) {
-        // Добавляем одну общую запись в журнал
-        const transaction = {
-            timestamp: new Date().toISOString(),
-            amount: totalSum,
-            description: `📦 Заказ у поставщиков: ${allItemsForLog.join('; ')}`,
-            category: 'expense',
-            subcategory: 'order'
-        };
-        Game.state.transactions.unshift(transaction);
-        Game.state.transactionHistory.unshift(transaction);
-        if (Game.state.transactions.length > 500) Game.state.transactions.pop();
-        if (Game.state.transactionHistory.length > 5000) Game.state.transactionHistory.pop();
-        await Game.forceSave();
-        
+        // Очищаем корзину
         currentCart = [];
         updateCartDisplay();
         updateCartCount();
+        
+        // Закрываем модальные окна
         document.getElementById('suppliersModal')?.classList.remove('active');
         document.getElementById('cartOnlyModal')?.classList.remove('active');
         
-        if (Charts && Charts.renderStatsAndChart) Charts.renderStatsAndChart(Game.state);
-        if (UI && UI.renderLogs) UI.renderLogs(Game.state);
-        if (UI && UI.updateFinanceUI) UI.updateFinanceUI(Game.state);
+        // Перезагружаем состояние игры
+        const gameData = await API.loadGame();
+        Game.updateState(gameData);
         
         UI.showAutoMessage(`✅ Заказ оформлен! Общая сумма: ${Game.formatMoney(totalSum)} ₽`, 'success');
     }
@@ -1352,12 +1306,8 @@ function renderSuggestions(suggestions, isAdmin) {
         return (order[a.status] || 2) - (order[b.status] || 2);
     });
     
-    if (sorted.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:20px;">Нет предложений</div>';
-        return;
-    }
-    
-    let html = '<div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">';
+    // КНОПКИ ФИЛЬТРОВ — ВСЕГДА ПОКАЗЫВАЕМ
+    let filtersHtml = '<div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">';
     const filters = [
         { value: 'all', label: '📋 Все' },
         { value: 'new', label: '🆕 Новые' },
@@ -1366,45 +1316,52 @@ function renderSuggestions(suggestions, isAdmin) {
         { value: 'rejected', label: '❌ Отклонённые' }
     ];
     for (let f of filters) {
-        html += `<button class="suggestions-filter-btn btn-sm ${currentSuggestionsFilter === f.value ? 'btn-green' : 'btn-blue'}" data-filter="${f.value}">${f.label}</button>`;
+        filtersHtml += `<button class="suggestions-filter-btn btn-sm ${currentSuggestionsFilter === f.value ? 'btn-green' : 'btn-blue'}" data-filter="${f.value}">${f.label}</button>`;
     }
-    html += '</div><div id="suggestionsListItems">';
+    filtersHtml += '</div>';
     
-    for (let s of sorted) {
-        let statusText = '';
-        let statusClass = '';
-        switch (s.status) {
-            case 'new': statusText = '🆕 Новое'; statusClass = 'status-new'; break;
-            case 'in_work': statusText = '🔧 В работе'; statusClass = 'status-work'; break;
-            case 'completed': statusText = '✅ Выполнено'; statusClass = 'status-completed'; break;
-            case 'rejected': statusText = '❌ Отклонено'; statusClass = 'status-rejected'; break;
-            default: statusText = '🆕 Новое'; statusClass = 'status-new';
+    // СПИСОК ПРЕДЛОЖЕНИЙ
+    let itemsHtml = '<div id="suggestionsListItems">';
+    
+    if (sorted.length === 0) {
+        itemsHtml += '<div style="text-align:center; padding:20px;">😴 Нет предложений в этой категории</div>';
+    } else {
+        for (let s of sorted) {
+            let statusText = '';
+            let statusClass = '';
+            switch (s.status) {
+                case 'new': statusText = '🆕 Новое'; statusClass = 'status-new'; break;
+                case 'in_work': statusText = '🔧 В работе'; statusClass = 'status-work'; break;
+                case 'completed': statusText = '✅ Выполнено'; statusClass = 'status-completed'; break;
+                case 'rejected': statusText = '❌ Отклонено'; statusClass = 'status-rejected'; break;
+                default: statusText = '🆕 Новое'; statusClass = 'status-new';
+            }
+            itemsHtml += `
+                <div class="suggestion-item" data-id="${s.id}" style="background:var(--stat-bg); border-radius:16px; padding:12px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                        <div><strong>${escapeHtml(s.username)}</strong> · <span class="${statusClass}" style="font-size:0.7rem;">${statusText}</span></div>
+                        <div style="font-size:0.7rem; opacity:0.6;">${new Date(s.created_at).toLocaleString()}</div>
+                    </div>
+                    <div style="margin-top:8px;">${escapeHtml(s.message)}</div>
+                    ${isAdmin ? `
+                    <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+                        <select class="suggestion-status-select" data-id="${s.id}" style="width:120px;">
+                            <option value="new" ${s.status === 'new' ? 'selected' : ''}>🆕 Новое</option>
+                            <option value="in_work" ${s.status === 'in_work' ? 'selected' : ''}>🔧 В работе</option>
+                            <option value="completed" ${s.status === 'completed' ? 'selected' : ''}>✅ Выполнено</option>
+                            <option value="rejected" ${s.status === 'rejected' ? 'selected' : ''}>❌ Отклонено</option>
+                        </select>
+                        <button class="delete-suggestion-btn btn-sm btn-red" data-id="${s.id}">🗑️</button>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
         }
-        html += `
-            <div class="suggestion-item" data-id="${s.id}" style="background:var(--stat-bg); border-radius:16px; padding:12px; margin-bottom:12px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-                    <div><strong>${escapeHtml(s.username)}</strong> · <span class="${statusClass}" style="font-size:0.7rem;">${statusText}</span></div>
-                    <div style="font-size:0.7rem; opacity:0.6;">${new Date(s.created_at).toLocaleString()}</div>
-                </div>
-                <div style="margin-top:8px;">${escapeHtml(s.message)}</div>
-                ${isAdmin ? `
-                <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
-                    <select class="suggestion-status-select" data-id="${s.id}" style="width:120px;">
-                        <option value="new" ${s.status === 'new' ? 'selected' : ''}>🆕 Новое</option>
-                        <option value="in_work" ${s.status === 'in_work' ? 'selected' : ''}>🔧 В работе</option>
-                        <option value="completed" ${s.status === 'completed' ? 'selected' : ''}>✅ Выполнено</option>
-                        <option value="rejected" ${s.status === 'rejected' ? 'selected' : ''}>❌ Отклонено</option>
-                    </select>
-                    <button class="delete-suggestion-btn btn-sm btn-red" data-id="${s.id}">🗑️</button>
-                </div>
-                ` : ''}
-            </div>
-        `;
     }
-    html += '</div>';
-    container.innerHTML = html;
+    itemsHtml += '</div>';
     
-    // Обработчики фильтров
+    container.innerHTML = filtersHtml + itemsHtml;
+    
     document.querySelectorAll('.suggestions-filter-btn').forEach(btn => {
         btn.onclick = () => {
             currentSuggestionsFilter = btn.dataset.filter;
@@ -1628,6 +1585,7 @@ async function deleteNewsItem(id) {
     }
 }
 
+// ========== ОСНОВНАЯ ЗАГРУЗКА ==========
 async function checkSessionAndStart() {
     try {
         const loggedIn = await API.checkSession();
@@ -1775,11 +1733,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     document.getElementById('addDrinkBtn')?.addEventListener('click', () => {
-        console.log('📢 Открываем модальное окно создания напитка');
         if (Game.openCreateDrinkModal) {
             Game.openCreateDrinkModal();
         } else {
-            console.error('❌ Game.openCreateDrinkModal не найден!');
             UI.showAutoMessage('❌ Ошибка: функция создания напитков не загружена', 'error');
         }
     });
