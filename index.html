@@ -75,13 +75,13 @@
                         <button id="profileBtn" class="btn-blue">👤 Профиль</button>
                         <button id="shareBtn" class="btn-green">📢 Пригласить друзей</button>
                         <button id="newsBtn" class="btn-orange">Новости</button>
-                      </div>
+                        <button id="adminSettingsBtn" class="btn-purple" style="display: none;">⚙️ Настройки</button>
+                    </div>
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
                         <button id="suggestionsBtn" class="btn-purple">💡 Идеи</button>
                         <button id="contactsBtn" class="btn-blue">📞 Контакты</button>
                         <button id="helpBtn" class="btn-blue">❓ Помощь</button>
-                           <button id="adminSettingsBtn" class="btn-purple" style="display: none;">⚙️ Настройки</button>
-                   <button id="logoutBtn" class="btn-orange">🚪 Выйти</button>
+                        <button id="logoutBtn" class="btn-orange">🚪 Выйти</button>
                     </div>
                 </div>
             </div>
@@ -124,45 +124,56 @@
             </div>
         </div>
 
-        <!-- ТРИ КОЛОНКИ (всегда видимы) -->
-        <div class="pc-three-columns">
-            <div class="coffee-card">
-                <div class="card-header">
-                    <span>💰 Налог и тарифы</span>
-                </div>
-                <div class="card-body" style="padding: 12px;">
-                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
-                        <span>📑 Налог:</span>
-                        <input type="number" id="taxPercent" value="6" step="1" style="width: 60px;"> %
-                        <button id="updateTaxBtn" class="btn-sm">✔</button>
-                    </div>
-                    <div id="electricityAdminBlock" style="display: none;">
-                        <div style="font-weight: bold; margin-bottom: 10px;">⚡ Тарифы на электричество (₽/кВт·ч)</div>
-                        <div class="elec-rates-container">
-                            <div class="elec-row"><span class="elec-label">📊 До 3900 кВт·ч</span><div class="elec-inputs"><div class="elec-input-group"><span class="elec-icon">☀️</span><span class="elec-text">лето</span><input type="number" id="elecRate1Summer" value="6.43" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div><div class="elec-input-group"><span class="elec-icon">❄️</span><span class="elec-text">зима</span><input type="number" id="elecRate1Winter" value="7.15" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div></div></div>
-                            <div class="elec-row"><span class="elec-label">📊 3900-6000 кВт·ч</span><div class="elec-inputs"><div class="elec-input-group"><span class="elec-icon">☀️</span><span class="elec-text">лето</span><input type="number" id="elecRate2Summer" value="9.18" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div><div class="elec-input-group"><span class="elec-icon">❄️</span><span class="elec-text">зима</span><input type="number" id="elecRate2Winter" value="10.23" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div></div></div>
-                            <div class="elec-row"><span class="elec-label">📊 Свыше 6000 кВт·ч</span><div class="elec-inputs"><div class="elec-input-group"><span class="elec-icon">☀️</span><span class="elec-text">лето</span><input type="number" id="elecRate3Summer" value="11.05" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div><div class="elec-input-group"><span class="elec-icon">❄️</span><span class="elec-text">зима</span><input type="number" id="elecRate3Winter" value="13.47" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div></div></div>
+        <!-- ТАБЫ ДЛЯ НАЛОГА/ТАРИФОВ/ЗАКАЗОВ/РАСХОДОВ -->
+        <div class="tabs-container-secondary" style="margin-bottom: 20px;">
+            <div class="tabs-header-secondary">
+                <button class="tab-btn-secondary active" data-tab-secondary="tab-tax">💰 Налог и тарифы</button>
+                <button class="tab-btn-secondary" data-tab-secondary="tab-orders">📋 Активные заказы</button>
+                <button class="tab-btn-secondary" data-tab-secondary="tab-expenses">📅 Расходы</button>
+            </div>
+            <div class="tabs-content-secondary">
+                <div id="tab-tax" class="tab-pane-secondary active">
+                    <div class="coffee-card">
+                        <div class="card-header">
+                            <span>💰 Налог и тарифы</span>
                         </div>
-                        <button id="saveElecRatesBtn" class="btn-sm btn-green" style="margin-top: 12px;">💾 Сохранить</button>
+                        <div class="card-body" style="padding: 12px;">
+                            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                                <span>📑 Налог:</span>
+                                <input type="number" id="taxPercent" value="6" step="1" style="width: 60px;"> %
+                                <button id="updateTaxBtn" class="btn-sm">✔</button>
+                            </div>
+                            <div id="electricityAdminBlock" style="display: none;">
+                                <div style="font-weight: bold; margin-bottom: 10px;">⚡ Тарифы на электричество (₽/кВт·ч)</div>
+                                <div class="elec-rates-container">
+                                    <div class="elec-row"><span class="elec-label">📊 До 3900 кВт·ч</span><div class="elec-inputs"><div class="elec-input-group"><span class="elec-icon">☀️</span><span class="elec-text">лето</span><input type="number" id="elecRate1Summer" value="6.43" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div><div class="elec-input-group"><span class="elec-icon">❄️</span><span class="elec-text">зима</span><input type="number" id="elecRate1Winter" value="7.15" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div></div></div>
+                                    <div class="elec-row"><span class="elec-label">📊 3900-6000 кВт·ч</span><div class="elec-inputs"><div class="elec-input-group"><span class="elec-icon">☀️</span><span class="elec-text">лето</span><input type="number" id="elecRate2Summer" value="9.18" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div><div class="elec-input-group"><span class="elec-icon">❄️</span><span class="elec-text">зима</span><input type="number" id="elecRate2Winter" value="10.23" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div></div></div>
+                                    <div class="elec-row"><span class="elec-label">📊 Свыше 6000 кВт·ч</span><div class="elec-inputs"><div class="elec-input-group"><span class="elec-icon">☀️</span><span class="elec-text">лето</span><input type="number" id="elecRate3Summer" value="11.05" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div><div class="elec-input-group"><span class="elec-icon">❄️</span><span class="elec-text">зима</span><input type="number" id="elecRate3Winter" value="13.47" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div></div></div>
+                                </div>
+                                <button id="saveElecRatesBtn" class="btn-sm btn-green" style="margin-top: 12px;">💾 Сохранить</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="coffee-card">
-                <div class="card-header">
-                    <span>📋 Активные заказы</span>
+                <div id="tab-orders" class="tab-pane-secondary">
+                    <div class="coffee-card">
+                        <div class="card-header">
+                            <span>📋 Активные заказы</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="ordersList">Нет активных заказов</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div id="ordersList">Нет активных заказов</div>
-                </div>
-            </div>
-
-            <div class="coffee-card">
-                <div class="card-header">
-                    <span>📅 Расходы</span>
-                </div>
-                <div class="card-body" style="padding: 12px;">
-                    <div id="upcomingExpensesContent">Загрузка...</div>
+                <div id="tab-expenses" class="tab-pane-secondary">
+                    <div class="coffee-card">
+                        <div class="card-header">
+                            <span>📅 Расходы</span>
+                        </div>
+                        <div class="card-body" style="padding: 12px;">
+                            <div id="upcomingExpensesContent">Загрузка...</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -559,6 +570,23 @@
         };
     }
     
+    // Вторичные табы
+    function initSecondaryTabs() {
+        const tabBtns = document.querySelectorAll('.tab-btn-secondary');
+        const tabPanes = document.querySelectorAll('.tab-pane-secondary');
+        
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tabSecondary;
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabPanes.forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                const activePane = document.getElementById(tabId);
+                if (activePane) activePane.classList.add('active');
+            });
+        });
+    }
+    
     // ========== ТАБЫ ==========
     function initTabs() {
         const tabBtns = document.querySelectorAll('.tab-btn');
@@ -567,14 +595,11 @@
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 const tabId = btn.dataset.tab;
-                
                 tabBtns.forEach(b => b.classList.remove('active'));
                 tabPanes.forEach(p => p.classList.remove('active'));
-                
                 btn.classList.add('active');
                 const activePane = document.getElementById(tabId);
                 if (activePane) activePane.classList.add('active');
-                
                 localStorage.setItem('activeTab', tabId);
             });
         });
@@ -602,6 +627,7 @@
                 if (gamePanel) gamePanel.classList.remove('hidden-init');
                 if (window.checkSessionAndStart) window.checkSessionAndStart();
                 initTabs();
+                initSecondaryTabs();
             } else {
                 if (loader) loader.style.display = 'none';
                 if (loginPanel) { loginPanel.style.display = 'flex'; loginPanel.classList.remove('hidden-init'); }
