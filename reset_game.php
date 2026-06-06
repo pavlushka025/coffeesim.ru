@@ -11,7 +11,6 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Читаем сумму из запроса
 $input = json_decode(file_get_contents('php://input'), true);
 $startBalance = isset($input['start_balance']) ? (float)$input['start_balance'] : 10000;
 
@@ -47,7 +46,7 @@ $state['loans'] = [];
 $state['nextIngId'] = 100;
 $state['nextDrinkId'] = 100;
 
-// Если у игрока был бесплатный автомат — восстанавливаем его
+// Если был бесплатный автомат — восстанавливаем его
 if ($hadFreeMachine) {
     $freeMachine = $state['realMachines'][0];
     $state['machines'] = [[
@@ -65,7 +64,6 @@ if ($hadFreeMachine) {
     ]];
     $state['machineCounter'] = 2;
     
-    // Добавляем запись в журнал
     $state['transactions'][] = [
         'timestamp' => date('Y-m-d H:i:s'),
         'amount' => 0,
