@@ -29,18 +29,33 @@ if (!$targetUsername || $newBalance < 0) {
 }
 
 // Найти игрока
-$stmt = $pdo->prepare("SELECT id, referrer_id FROM users WHERE username = ?");
+$stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
 $stmt->execute([$targetUsername]);
-$target = $stmt->fetch(PDO::FETCH_ASSOC);
-$targetId = $target['id'] ?? null;
-$hasReferrer = !empty($target['referrer_id']);
+$targetId = $stmt->fetchColumn();
 
 if (!$targetId) {
     echo json_encode(['error' => 'Игрок не найден']);
     exit;
 }
 
-// Новая игра из default_state
+// Проверяем, был ли у игрока бесплатный автомат
+$stmt = $pdo->prepare("SELECT game_state FROM game_saves WHERE user_id = ?");
+$stmt->execute([$targetId]);
+$currentSave = $stmt->fetch(PDO::FETCH_ASSOC);
+$hadFreeMachine = false;
+
+if ($currentSave) {
+    $currentState = json_decode($currentSave['game_state'], true);
+    if ($currentState && isset($currentState['machines'])) {
+        foreach ($currentState['machines'] as $machine) {
+            if ($machine['buyPrice'] == 0 && $machine['name'] == 'Jetinno JL 300') {
+                $hadFreeMachine = true;
+                break;
+            }
+        }
+    }
+}
+
 $defaultGame = getDefaultState();
 $defaultGame['balance'] = $newBalance;
 $defaultGame['lastSyncTime'] = date('Y-m-d H:i:s');
@@ -49,12 +64,40 @@ $defaultGame['transactionHistory'] = [];
 $defaultGame['totalIncomeEver'] = 0;
 $defaultGame['totalExpenseEver'] = 0;
 $defaultGame['totalCupsSold'] = 0;
-$defaultGame['machines'] = [];
-$defaultGame['machineCounter'] = 1;
 
-// Если игрок пришёл по реферальной ссылке — НЕ ДАЁМ бесплатный автомат повторно
-if (!$hasReferrer) {
-    // Можно оставить пустым — автомат не выдаём
+// Если был бесплатный автомат — восстанавливаем
+if ($hadFreeMachine) {
+    $freeMachine = $defaultGame['realMachines'][0];
+    $defaultGame['machines'] = [[
+        'id' => 1,
+        'name' => $freeMachine['name'],
+        'buyPrice' => 0,
+        'rent' => $freeMachine['rent'],
+        'acquirerPercent' => $freeMachine['acquirerPercent'],
+        'maintenanceCost' => $freeMachine['maintenanceCost'],
+        'serviceCost' => $freeMachine['serviceCost'],
+        'powerKwh' => $freeMachine['powerKwh'],
+        'totalSales' => 0,
+        'totalIncome' => 0,
+        'totalExpense' => 0
+    ]];
+    $defaultGame['machineCounter'] = 2;
+    
+    $defaultGame['transactions'][] = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'amount' => 0,
+        'description' => '🎁 Бесплатный автомат "' . $freeMachine['name'] . '" восстановлен после сброса игры администратором',
+        'category' => 'info'
+    ];
+    $defaultGame['transactionHistory'][] = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'amount' => 0,
+        'description' => '🎁 Бесплатный автомат "' . $freeMachine['name'] . '" восстановлен после сброса игры администратором',
+        'category' => 'info'
+    ];
+} else {
+    $defaultGame['machines'] = [];
+    $defaultGame['machineCounter'] = 1;
 }
 
 foreach ($defaultGame['ingredients'] as &$ing) {
@@ -69,3 +112,4 @@ $stmt = $pdo->prepare("UPDATE game_saves SET game_state = ?, last_sync_time = NO
 $stmt->execute([$json, $targetId]);
 
 echo json_encode(['success' => true, 'message' => "Игра сброшена для {$targetUsername} с балансом {$newBalance} ₽"]);
+?>
