@@ -10,7 +10,7 @@ window.Charts = Charts;
 let gameInitialized = false;
 let isAdminCache = false;
 
-// ========== НОВАЯ КОРЗИНА (поддержка нескольких поставщиков) ==========
+// ========== КОРЗИНА (поддержка нескольких поставщиков) ==========
 let currentCart = [];
 
 if (window.location.search.includes('ref=')) {
@@ -34,7 +34,7 @@ async function checkIsAdmin() {
     }
 }
 
-// ========== АДМИН-ПАНЕЛЬ (РАСШИРЕННАЯ) ==========
+// ========== АДМИН-ПАНЕЛЬ ==========
 async function checkIsAdminForSettings() {
     try {
         const res = await fetch('get_user.php');
@@ -60,16 +60,18 @@ function showIngredientsPriceEditor() {
     }
     
     let html = '<div style="font-weight:bold; margin-bottom:10px;">📦 Редактирование цен ингредиентов</div>';
+    html += '<div style="max-height:400px; overflow-y:auto;">';
     for (let ing of ingredients) {
         html += `
-            <div class="price-editor-item">
-                <span class="price-editor-name">${UI.escapeHtml(ing.name)}</span>
-                <input type="number" id="price_ing_${ing.id}" class="price-editor-input" value="${ing.currentBuyPrice}" step="1" style="width: 100px;">
-                <span class="price-editor-unit">₽/${ing.unit}</span>
-                <button class="btn-sm btn-green save-ing-price" data-id="${ing.id}">💾</button>
+            <div class="price-editor-item" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border); gap: 10px;">
+                <span style="flex: 2; font-weight: bold;">${UI.escapeHtml(ing.name)}</span>
+                <input type="number" id="price_ing_${ing.id}" class="price-editor-input" value="${ing.currentBuyPrice}" step="1" style="width: 120px; padding: 6px; border-radius: 40px;">
+                <span style="width: 60px;">₽/${ing.unit}</span>
+                <button class="btn-sm btn-green save-ing-price" data-id="${ing.id}" style="min-width: 70px;">💾 Сохранить</button>
             </div>
         `;
     }
+    html += '</div>';
     container.innerHTML = html;
     container.style.display = 'block';
     
@@ -99,17 +101,19 @@ function showDrinksPriceEditor() {
     }
     
     let html = '<div style="font-weight:bold; margin-bottom:10px;">☕ Редактирование цен напитков</div>';
+    html += '<div style="max-height:400px; overflow-y:auto;">';
     for (let drink of drinks) {
         const cost = Game.getDrinkCost(Game.state, drink);
         html += `
-            <div class="price-editor-item">
-                <span class="price-editor-name">${UI.escapeHtml(drink.name)}</span>
-                <input type="number" id="price_drink_${drink.id}" class="price-editor-input" value="${drink.price}" step="5" style="width: 100px;">
-                <span class="price-editor-unit">₽ (себест: ${Game.formatMoney(cost)} ₽)</span>
-                <button class="btn-sm btn-green save-drink-price" data-id="${drink.id}">💾</button>
+            <div class="price-editor-item" style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border); gap: 10px;">
+                <span style="flex: 2; font-weight: bold;">${UI.escapeHtml(drink.name)}</span>
+                <input type="number" id="price_drink_${drink.id}" class="price-editor-input" value="${drink.price}" step="5" style="width: 120px; padding: 6px; border-radius: 40px;">
+                <span style="width: 80px;">₽ (себест: ${Game.formatMoney(cost)} ₽)</span>
+                <button class="btn-sm btn-green save-drink-price" data-id="${drink.id}" style="min-width: 70px;">💾 Сохранить</button>
             </div>
         `;
     }
+    html += '</div>';
     container.innerHTML = html;
     container.style.display = 'block';
     
@@ -133,7 +137,7 @@ function showDrinksPriceEditor() {
 }
 
 // ========== ДОБАВЛЕНИЕ ИНГРЕДИЕНТА (админ) ==========
-window.openAddIngredientModal = function() {
+window.openAddIngredientModal = async function() {
     const modal = document.getElementById('addIngredientModal');
     if (!modal) {
         UI.showAutoMessage('❌ Модальное окно не найдено', 'error');
@@ -168,8 +172,112 @@ window.openAddIngredientModal = function() {
         }
     }
     
+    // Обработчик изменения выбора поставщика
+    supplierSelect.onchange = function() {
+        const fields = document.getElementById('newSupplierFields');
+        if (this.value === 'new') {
+            fields.style.display = 'block';
+        } else {
+            fields.style.display = 'none';
+        }
+    };
+    
     modal.classList.add('active');
 };
+
+// Обработчик подтверждения добавления ингредиента
+document.getElementById('confirmAddIngredientBtn')?.addEventListener('click', async () => {
+    const name = document.getElementById('newIngName').value.trim();
+    const type = document.getElementById('newIngType').value;
+    const unit = document.getElementById('newIngUnit').value;
+    const packSize = parseFloat(document.getElementById('newIngPackSize').value);
+    const price = parseFloat(document.getElementById('newIngPrice').value);
+    const threshold = parseFloat(document.getElementById('newIngThreshold').value);
+    const supplierSelect = document.getElementById('newIngSupplier');
+    const supplierValue = supplierSelect.value;
+    
+    if (!name || isNaN(price) || price <= 0) {
+        UI.showAutoMessage('❌ Заполните название и цену', 'error');
+        return;
+    }
+    
+    // Если выбран "новый поставщик" — создаём его
+    let supplierId = null;
+    if (supplierValue === 'new') {
+        const newSupplierName = document.getElementById('newSupplierName').value.trim();
+        if (!newSupplierName) {
+            UI.showAutoMessage('❌ Введите название нового поставщика', 'error');
+            return;
+        }
+        
+        const deliveryCost = parseFloat(document.getElementById('newSupplierDeliveryCost').value);
+        const freeFrom = parseFloat(document.getElementById('newSupplierFreeFrom').value);
+        const timeMin = parseInt(document.getElementById('newSupplierTimeMin').value);
+        const timeMax = parseInt(document.getElementById('newSupplierTimeMax').value);
+        
+        const res = await fetch('add_supplier.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: newSupplierName,
+                delivery_cost: deliveryCost,
+                free_delivery_from: freeFrom,
+                delivery_time_min: timeMin,
+                delivery_time_max: timeMax
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            supplierId = data.supplier_id;
+            UI.showAutoMessage(`✅ Поставщик "${newSupplierName}" создан`, 'success');
+        } else {
+            UI.showAutoMessage('❌ Ошибка создания поставщика', 'error');
+            return;
+        }
+    } else {
+        supplierId = parseInt(supplierValue);
+    }
+    
+    // Добавляем ингредиент
+    const res = await fetch('add_ingredient.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name: name,
+            cost_per_unit: price,
+            unit: unit,
+            type: type,
+            pack_size: packSize,
+            threshold: threshold
+        })
+    });
+    const data = await res.json();
+    
+    if (data.success) {
+        // Привязываем ингредиент к поставщику
+        await fetch('add_supplier_item.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                supplier_id: supplierId,
+                ingredient_id: data.ingredient_id,
+                price: price,
+                unit: unit,
+                pack_size: packSize,
+                min_quantity: 1
+            })
+        });
+        
+        UI.showAutoMessage(`✅ Ингредиент "${name}" добавлен`, 'success');
+        document.getElementById('addIngredientModal').classList.remove('active');
+        
+        // Обновляем игру
+        const gameData = await API.loadGame();
+        Game.updateState(gameData);
+    } else {
+        UI.showAutoMessage('❌ Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'error');
+    }
+});
 
 function initAdminPanel() {
     const adminBtn = document.getElementById('adminSettingsBtn');
@@ -235,19 +343,14 @@ function initAdminPanel() {
         document.getElementById('adminSettingsModal').classList.add('active');
     };
     
-    // Сохранение налога
+    // Сохранение налога (только админ)
     const taxBtn = document.getElementById('adminUpdateTaxBtn');
     if (taxBtn) {
         taxBtn.onclick = async () => {
             const percent = parseFloat(document.getElementById('adminTaxPercent').value);
             if (!isNaN(percent) && percent >= 0 && percent <= 100) {
-                if (Game.updateTax) {
-                    await Game.updateTax(percent);
-                } else {
-                    Game.state.taxPercent = percent;
-                    await Game.forceSave();
-                    UI.showAutoMessage(`✅ Налог изменён на ${percent}%`, 'success');
-                }
+                await Game.updateTax(percent);
+                UI.showAutoMessage(`✅ Налог изменён на ${percent}%`, 'success');
             }
         };
     }
@@ -482,100 +585,7 @@ function initAdminPanel() {
     }
 }
 
-// ========== ОБРАБОТЧИК ДЛЯ КНОПКИ ДОБАВЛЕНИЯ ИНГРЕДИЕНТА ==========
-document.getElementById('confirmAddIngredientBtn')?.addEventListener('click', async () => {
-    const name = document.getElementById('newIngName').value.trim();
-    const type = document.getElementById('newIngType').value;
-    const unit = document.getElementById('newIngUnit').value;
-    const packSize = parseFloat(document.getElementById('newIngPackSize').value);
-    const price = parseFloat(document.getElementById('newIngPrice').value);
-    const threshold = parseFloat(document.getElementById('newIngThreshold').value);
-    const supplierSelect = document.getElementById('newIngSupplier');
-    const supplierValue = supplierSelect.value;
-    
-    if (!name || isNaN(price) || price <= 0) {
-        UI.showAutoMessage('❌ Заполните название и цену', 'error');
-        return;
-    }
-    
-    // Если выбран "новый поставщик" — создаём его
-    let supplierId = null;
-    if (supplierValue === 'new') {
-        const newSupplierName = document.getElementById('newSupplierName').value.trim();
-        if (!newSupplierName) {
-            UI.showAutoMessage('❌ Введите название нового поставщика', 'error');
-            return;
-        }
-        
-        const deliveryCost = parseFloat(document.getElementById('newSupplierDeliveryCost').value);
-        const freeFrom = parseFloat(document.getElementById('newSupplierFreeFrom').value);
-        const timeMin = parseInt(document.getElementById('newSupplierTimeMin').value);
-        const timeMax = parseInt(document.getElementById('newSupplierTimeMax').value);
-        
-        const res = await fetch('add_supplier.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: newSupplierName,
-                delivery_cost: deliveryCost,
-                free_delivery_from: freeFrom,
-                delivery_time_min: timeMin,
-                delivery_time_max: timeMax
-            })
-        });
-        const data = await res.json();
-        if (data.success) {
-            supplierId = data.supplier_id;
-            UI.showAutoMessage(`✅ Поставщик "${newSupplierName}" создан`, 'success');
-        } else {
-            UI.showAutoMessage('❌ Ошибка создания поставщика', 'error');
-            return;
-        }
-    } else {
-        supplierId = parseInt(supplierValue);
-    }
-    
-    // Добавляем ингредиент
-    const res = await fetch('add_ingredient.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            name: name,
-            cost_per_unit: price,
-            unit: unit,
-            type: type,
-            pack_size: packSize,
-            threshold: threshold
-        })
-    });
-    const data = await res.json();
-    
-    if (data.success) {
-        // Привязываем ингредиент к поставщику
-        await fetch('add_supplier_item.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                supplier_id: supplierId,
-                ingredient_id: data.ingredient_id,
-                price: price,
-                unit: unit,
-                pack_size: packSize,
-                min_quantity: 1
-            })
-        });
-        
-        UI.showAutoMessage(`✅ Ингредиент "${name}" добавлен`, 'success');
-        document.getElementById('addIngredientModal').classList.remove('active');
-        
-        // Обновляем игру
-        const gameData = await API.loadGame();
-        Game.updateState(gameData);
-    } else {
-        UI.showAutoMessage('❌ Ошибка: ' + (data.error || 'Неизвестная ошибка'), 'error');
-    }
-});
-
+// ========== ЗАГРУЗКА ПОСТАВЩИКОВ ДЛЯ ИНГРЕДИЕНТА ==========
 async function loadSuppliersForIngredient(ingredientId, ingredientName, ingredientUnit) {
     const res = await fetch('get_suppliers.php');
     const suppliers = await res.json();
@@ -653,6 +663,10 @@ async function loadSuppliersForIngredient(ingredientId, ingredientName, ingredie
     }
     container.innerHTML = html;
     
+    attachCartEvents();
+}
+
+function attachCartEvents() {
     document.querySelectorAll('.qty-minus').forEach(btn => {
         btn.onclick = () => {
             const supplierId = parseInt(btn.dataset.supplier);
@@ -838,6 +852,10 @@ function updateCartDisplay() {
         `;
     }
     
+    attachCartMiniEvents();
+}
+
+function attachCartMiniEvents() {
     document.querySelectorAll('.cart-qty-plus-mini').forEach(btn => {
         btn.onclick = () => {
             const supplierId = parseInt(btn.dataset.supplier);
@@ -965,13 +983,17 @@ async function checkoutOrder() {
     
     let totalSum = 0;
     let suppliersInfo = [];
+    let allItemsForLog = [];
     
     for (let supplier of currentCart) {
         let supplierTotal = 0;
         let totalUnits = 0;
+        let supplierItemsForLog = [];
+        
         for (let item of supplier.items) {
             supplierTotal += item.totalPrice;
             totalUnits += item.quantity;
+            supplierItemsForLog.push(`${item.name}: ${item.quantity} ${item.unit} (${Game.formatMoney(item.totalPrice)} ₽)`);
         }
         
         const supplierData = Game.state?.suppliers?.find(s => s.id === supplier.supplier_id);
@@ -989,8 +1011,11 @@ async function checkoutOrder() {
             items: supplier.items,
             delivery_cost: deliveryCost,
             total_cost: grandTotal,
-            supplier_name: supplier.supplier_name
+            supplier_name: supplier.supplier_name,
+            items_log: supplierItemsForLog
         });
+        
+        allItemsForLog.push(`📦 ${supplier.supplier_name}: ${supplierItemsForLog.join(', ')} (доставка ${deliveryCost === 0 ? 'бесплатно' : Game.formatMoney(deliveryCost) + ' ₽'}) — итого ${Game.formatMoney(grandTotal)} ₽`);
     }
     
     if (Game.state.balance < totalSum) {
@@ -1008,13 +1033,31 @@ async function checkoutOrder() {
     }
     
     if (allSuccess) {
+        // Добавляем одну общую запись в журнал
+        const transaction = {
+            timestamp: new Date().toISOString(),
+            amount: totalSum,
+            description: `📦 Заказ у поставщиков: ${allItemsForLog.join('; ')}`,
+            category: 'expense',
+            subcategory: 'order'
+        };
+        Game.state.transactions.unshift(transaction);
+        Game.state.transactionHistory.unshift(transaction);
+        if (Game.state.transactions.length > 500) Game.state.transactions.pop();
+        if (Game.state.transactionHistory.length > 5000) Game.state.transactionHistory.pop();
+        await Game.forceSave();
+        
         currentCart = [];
         updateCartDisplay();
         updateCartCount();
         document.getElementById('suppliersModal')?.classList.remove('active');
+        document.getElementById('cartOnlyModal')?.classList.remove('active');
+        
         if (Charts && Charts.renderStatsAndChart) Charts.renderStatsAndChart(Game.state);
         if (UI && UI.renderLogs) UI.renderLogs(Game.state);
         if (UI && UI.updateFinanceUI) UI.updateFinanceUI(Game.state);
+        
+        UI.showAutoMessage(`✅ Заказ оформлен! Общая сумма: ${Game.formatMoney(totalSum)} ₽`, 'success');
     }
 }
 
@@ -1113,6 +1156,10 @@ function showCartOnlyModal() {
     cartItemsDiv.innerHTML = html + fixedFooterHtml;
     modal?.classList.add('active');
     
+    attachCartModalEvents();
+}
+
+function attachCartModalEvents() {
     document.querySelectorAll('.cart-qty-plus').forEach(btn => {
         btn.onclick = () => {
             const supplierId = parseInt(btn.dataset.supplier);
@@ -1287,71 +1334,117 @@ async function forceSyncFromServer() {
 
 window.forceSyncFromServer = forceSyncFromServer;
 
-async function checkSessionAndStart() {
-    try {
-        const loggedIn = await API.checkSession();
-        if (loggedIn) {
-            await checkIsAdmin();
-            if (window.showGameUI) window.showGameUI();
-            const gameData = await API.loadGame();
-            Game.updateState(gameData);
-            
-            const buyAllBtn = document.getElementById('buyAllIngredientsBtn');
-            if (buyAllBtn) {
-                buyAllBtn.style.display = isAdminCache ? 'inline-flex' : 'none';
-            }
-            
-            const addIngredientBtn = document.getElementById('addIngredientBtn');
-            if (addIngredientBtn) {
-                addIngredientBtn.style.display = isAdminCache ? 'inline-flex' : 'none';
-            }
+// ========== СОРТИРОВКА ПРЕДЛОЖЕНИЙ ==========
+let currentSuggestionsFilter = 'all';
 
-            window.openSupplierForIngredient = async (ingredientId, ingredientName, ingredientUnit) => {
-                await loadSuppliersForIngredient(ingredientId, ingredientName, ingredientUnit);
-                document.getElementById('suppliersModal')?.classList.add('active');
-            };
-            
-            window.isAdminCache = isAdminCache;
-            
-            // Добавляем функцию для открытия модалки добавления ингредиента
-            window.openAddIngredientModal = openAddIngredientModal;
-            
-            const usernameDisplay = document.getElementById('usernameDisplay');
-            if (usernameDisplay && gameData && gameData.username) {
-                usernameDisplay.innerText = '👤 ' + gameData.username;
-            } else if (usernameDisplay) {
-                try {
-                    const userRes = await fetch('get_user.php');
-                    const userData = await userRes.json();
-                    if (userData.username) {
-                        usernameDisplay.innerText = '👤 ' + userData.username;
-                    }
-                } catch(e) {}
-            }
-            
-            await setupElectricityRatesForAdmin();
-            
-            // Инициализация админ-панели
-            await checkIsAdminForSettings();
-            initAdminPanel();
-            
-            Game.startSales();
-            Game.startAutoSync();
-            Game.startGameLoop();
-            gameInitialized = true;
-        } else {
-            if (window.showLoginUI) window.showLoginUI();
+function renderSuggestions(suggestions, isAdmin) {
+    const container = document.getElementById('suggestionsList');
+    if (!container) return;
+    
+    let filtered = suggestions;
+    if (currentSuggestionsFilter !== 'all') {
+        filtered = suggestions.filter(s => s.status === currentSuggestionsFilter);
+    }
+    
+    const sorted = [...filtered];
+    sorted.sort((a, b) => {
+        const order = { 'in_work': 1, 'new': 2, 'completed': 3, 'rejected': 3 };
+        return (order[a.status] || 2) - (order[b.status] || 2);
+    });
+    
+    if (sorted.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px;">Нет предложений</div>';
+        return;
+    }
+    
+    let html = '<div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">';
+    const filters = [
+        { value: 'all', label: '📋 Все' },
+        { value: 'new', label: '🆕 Новые' },
+        { value: 'in_work', label: '🔧 В работе' },
+        { value: 'completed', label: '✅ Выполненные' },
+        { value: 'rejected', label: '❌ Отклонённые' }
+    ];
+    for (let f of filters) {
+        html += `<button class="suggestions-filter-btn btn-sm ${currentSuggestionsFilter === f.value ? 'btn-green' : 'btn-blue'}" data-filter="${f.value}">${f.label}</button>`;
+    }
+    html += '</div><div id="suggestionsListItems">';
+    
+    for (let s of sorted) {
+        let statusText = '';
+        let statusClass = '';
+        switch (s.status) {
+            case 'new': statusText = '🆕 Новое'; statusClass = 'status-new'; break;
+            case 'in_work': statusText = '🔧 В работе'; statusClass = 'status-work'; break;
+            case 'completed': statusText = '✅ Выполнено'; statusClass = 'status-completed'; break;
+            case 'rejected': statusText = '❌ Отклонено'; statusClass = 'status-rejected'; break;
+            default: statusText = '🆕 Новое'; statusClass = 'status-new';
         }
-    } catch (error) {
-        console.error(error);
-        if (window.showLoginUI) window.showLoginUI();
+        html += `
+            <div class="suggestion-item" data-id="${s.id}" style="background:var(--stat-bg); border-radius:16px; padding:12px; margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                    <div><strong>${escapeHtml(s.username)}</strong> · <span class="${statusClass}" style="font-size:0.7rem;">${statusText}</span></div>
+                    <div style="font-size:0.7rem; opacity:0.6;">${new Date(s.created_at).toLocaleString()}</div>
+                </div>
+                <div style="margin-top:8px;">${escapeHtml(s.message)}</div>
+                ${isAdmin ? `
+                <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+                    <select class="suggestion-status-select" data-id="${s.id}" style="width:120px;">
+                        <option value="new" ${s.status === 'new' ? 'selected' : ''}>🆕 Новое</option>
+                        <option value="in_work" ${s.status === 'in_work' ? 'selected' : ''}>🔧 В работе</option>
+                        <option value="completed" ${s.status === 'completed' ? 'selected' : ''}>✅ Выполнено</option>
+                        <option value="rejected" ${s.status === 'rejected' ? 'selected' : ''}>❌ Отклонено</option>
+                    </select>
+                    <button class="delete-suggestion-btn btn-sm btn-red" data-id="${s.id}">🗑️</button>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    }
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Обработчики фильтров
+    document.querySelectorAll('.suggestions-filter-btn').forEach(btn => {
+        btn.onclick = () => {
+            currentSuggestionsFilter = btn.dataset.filter;
+            loadAndRenderSuggestions();
+        };
+    });
+    
+    if (isAdmin) {
+        document.querySelectorAll('.suggestion-status-select').forEach(select => {
+            select.addEventListener('change', async (e) => {
+                const id = select.dataset.id;
+                const newStatus = select.value;
+                await API.updateSuggestionStatus(id, newStatus);
+                loadAndRenderSuggestions();
+            });
+        });
+        document.querySelectorAll('.delete-suggestion-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = btn.dataset.id;
+                if (confirm('Удалить предложение?')) {
+                    await API.deleteSuggestion(id);
+                    loadAndRenderSuggestions();
+                }
+            });
+        });
     }
 }
 
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && gameInitialized) forceSyncFromServer();
-});
+async function loadAndRenderSuggestions() {
+    try {
+        const data = await API.getSuggestions();
+        if (data.success && data.suggestions) {
+            renderSuggestions(data.suggestions, data.is_admin);
+        }
+    } catch(e) {
+        console.error('Ошибка загрузки предложений:', e);
+    }
+}
 
+// ========== ФУНКЦИИ НОВОСТЕЙ ==========
 async function loadNewsList() {
     const response = await fetch('get_news.php');
     return await response.json();
@@ -1535,6 +1628,74 @@ async function deleteNewsItem(id) {
     }
 }
 
+async function checkSessionAndStart() {
+    try {
+        const loggedIn = await API.checkSession();
+        if (loggedIn) {
+            await checkIsAdmin();
+            if (window.showGameUI) window.showGameUI();
+            const gameData = await API.loadGame();
+            Game.updateState(gameData);
+            
+            const buyAllBtn = document.getElementById('buyAllIngredientsBtn');
+            if (buyAllBtn) {
+                buyAllBtn.style.display = isAdminCache ? 'inline-flex' : 'none';
+            }
+            
+            const addIngredientBtn = document.getElementById('addIngredientBtn');
+            if (addIngredientBtn) {
+                addIngredientBtn.style.display = isAdminCache ? 'inline-flex' : 'none';
+            }
+            
+            // Скрываем поле налога для обычных игроков
+            const taxPercentInput = document.getElementById('taxPercent');
+            const updateTaxBtn = document.getElementById('updateTaxBtn');
+            if (taxPercentInput && updateTaxBtn) {
+                if (!isAdminCache) {
+                    taxPercentInput.setAttribute('readonly', 'readonly');
+                    updateTaxBtn.style.display = 'none';
+                }
+            }
+
+            window.openSupplierForIngredient = async (ingredientId, ingredientName, ingredientUnit) => {
+                await loadSuppliersForIngredient(ingredientId, ingredientName, ingredientUnit);
+                document.getElementById('suppliersModal')?.classList.add('active');
+            };
+            
+            window.isAdminCache = isAdminCache;
+            window.openAddIngredientModal = openAddIngredientModal;
+            
+            const usernameDisplay = document.getElementById('usernameDisplay');
+            if (usernameDisplay && gameData && gameData.username) {
+                usernameDisplay.innerText = '👤 ' + gameData.username;
+            } else if (usernameDisplay) {
+                try {
+                    const userRes = await fetch('get_user.php');
+                    const userData = await userRes.json();
+                    if (userData.username) {
+                        usernameDisplay.innerText = '👤 ' + userData.username;
+                    }
+                } catch(e) {}
+            }
+            
+            await setupElectricityRatesForAdmin();
+            
+            await checkIsAdminForSettings();
+            initAdminPanel();
+            
+            Game.startSales();
+            Game.startAutoSync();
+            Game.startGameLoop();
+            gameInitialized = true;
+        } else {
+            if (window.showLoginUI) window.showLoginUI();
+        }
+    } catch (error) {
+        console.error(error);
+        if (window.showLoginUI) window.showLoginUI();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     UI.initTheme();
     
@@ -1629,9 +1790,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('updateTaxBtn')?.addEventListener('click', async () => {
         const value = parseFloat(document.getElementById('taxPercent')?.value);
-        if (!isNaN(value)) {
+        if (!isNaN(value) && isAdminCache) {
             const result = await API.updateTax(value);
             Game.updateState(result);
+        } else if (!isAdminCache) {
+            UI.showAutoMessage('❌ Изменение налога доступно только администратору', 'error');
         }
     });
     
@@ -1845,87 +2008,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('checkoutOrderBtn')?.addEventListener('click', checkoutOrder);
     
+    // Предложения и пожелания
     const suggestionsBtn = document.getElementById('suggestionsBtn');
     const suggestionsModal = document.getElementById('suggestionsModal');
     const closeSuggestionsModal = document.getElementById('closeSuggestionsModal');
     const submitSuggestionBtn = document.getElementById('submitSuggestionBtn');
     const suggestionText = document.getElementById('suggestionText');
-    const suggestionsList = document.getElementById('suggestionsList');
-
-    async function loadSuggestions() {
-        try {
-            const data = await API.getSuggestions();
-            if (data.success && data.suggestions) {
-                const isAdmin = data.is_admin;
-                const sortedSuggestions = [...data.suggestions];
-                sortedSuggestions.sort((a, b) => {
-                    const order = { 'in_work': 1, 'new': 2, 'completed': 3, 'rejected': 3 };
-                    return (order[a.status] || 2) - (order[b.status] || 2);
-                });
-                
-                let html = '';
-                for (let s of sortedSuggestions) {
-                    let statusText = '';
-                    let statusClass = '';
-                    switch (s.status) {
-                        case 'new': statusText = '🆕 Новое'; statusClass = 'status-new'; break;
-                        case 'in_work': statusText = '🔧 В работе'; statusClass = 'status-work'; break;
-                        case 'completed': statusText = '✅ Выполнено'; statusClass = 'status-completed'; break;
-                        case 'rejected': statusText = '❌ Отклонено'; statusClass = 'status-rejected'; break;
-                        default: statusText = '🆕 Новое'; statusClass = 'status-new';
-                    }
-                    html += `
-                        <div class="suggestion-item" data-id="${s.id}" style="background:var(--stat-bg); border-radius:16px; padding:12px; margin-bottom:12px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-                                <div><strong>${escapeHtml(s.username)}</strong> · <span class="${statusClass}" style="font-size:0.7rem;">${statusText}</span></div>
-                                <div style="font-size:0.7rem; opacity:0.6;">${new Date(s.created_at).toLocaleString()}</div>
-                            </div>
-                            <div style="margin-top:8px;">${escapeHtml(s.message)}</div>
-                            ${isAdmin ? `
-                            <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
-                                <select class="suggestion-status-select" data-id="${s.id}" style="width:120px;">
-                                    <option value="new" ${s.status === 'new' ? 'selected' : ''}>🆕 Новое</option>
-                                    <option value="in_work" ${s.status === 'in_work' ? 'selected' : ''}>🔧 В работе</option>
-                                    <option value="completed" ${s.status === 'completed' ? 'selected' : ''}>✅ Выполнено</option>
-                                    <option value="rejected" ${s.status === 'rejected' ? 'selected' : ''}>❌ Отклонено</option>
-                                </select>
-                                <button class="delete-suggestion-btn btn-sm btn-red" data-id="${s.id}">🗑️</button>
-                            </div>
-                            ` : ''}
-                        </div>
-                    `;
-                }
-                if (html === '') html = '<div style="text-align:center; padding:20px;">Пока нет предложений. Будьте первым!</div>';
-                suggestionsList.innerHTML = html;
-
-                if (isAdmin) {
-                    document.querySelectorAll('.suggestion-status-select').forEach(select => {
-                        select.addEventListener('change', async (e) => {
-                            const id = select.dataset.id;
-                            const newStatus = select.value;
-                            await API.updateSuggestionStatus(id, newStatus);
-                            loadSuggestions();
-                        });
-                    });
-                    document.querySelectorAll('.delete-suggestion-btn').forEach(btn => {
-                        btn.addEventListener('click', async (e) => {
-                            const id = btn.dataset.id;
-                            if (confirm('Удалить предложение?')) {
-                                await API.deleteSuggestion(id);
-                                loadSuggestions();
-                            }
-                        });
-                    });
-                }
-            }
-        } catch(e) {
-            console.error('Ошибка загрузки предложений:', e);
-        }
-    }
-
+    
     if (suggestionsBtn && suggestionsModal) {
         suggestionsBtn.onclick = () => {
-            loadSuggestions();
+            loadAndRenderSuggestions();
             suggestionsModal.classList.add('active');
         };
         if (closeSuggestionsModal) {
@@ -1942,7 +2034,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const res = await API.addSuggestion(msg);
                     if (res.success) {
                         suggestionText.value = '';
-                        loadSuggestions();
+                        loadAndRenderSuggestions();
                         alert('Предложение отправлено!');
                     } else {
                         alert('Ошибка: ' + (res.error || 'Неизвестная ошибка'));
@@ -1954,6 +2046,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
+    // Контакты
     const contactsBtn = document.getElementById('contactsBtn');
     const contactsModal = document.getElementById('contactsModal');
     const closeContactsModal = document.getElementById('closeContactsModal');
@@ -1992,6 +2085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
+    // Пригласить друзей
     const shareBtn = document.getElementById('shareBtn');
     if (shareBtn) {
         shareBtn.addEventListener('click', async () => {
