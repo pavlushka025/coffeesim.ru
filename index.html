@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>☕ CoffeeSim — симулятор бизнеса на кофеавтоматах</title>
+    <meta name="description" content="Открой свою кофейню онлайн. Покупай автоматы, ингредиенты и зарабатывай. Налоги, кредиты, аренда, эквайринг — полная экономика.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23e0a45e' d='M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 13H4V5h16v11zM7 10h2v2H7v-2zm4 0h2v2h-2v-2zm4 0h2v2h-2v-2z'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="loader" class="loader">☕ Загрузка CoffeeSim...</div>
+
+<div id="loginPanel" class="login-container hidden-init">
+    <div class="login-header-top">
+        <div class="login-logo">
+            <h1>☕ CoffeeSim</h1>
+            <p>Симулятор реального бизнеса на кофейных автоматах</p>
+        </div>
+        <div class="login-form-top">
+            <input type="text" id="loginUsername" placeholder="Логин" style="margin-bottom: 5px;">
+            <div class="password-wrapper">
+                <input type="password" id="loginPassword" placeholder="Пароль">
+                <span class="toggle-password" id="togglePassword">👁️</span>
+            </div>
+            <div id="loginError" class="login-error" style="color: #ff6b6b; font-size: 0.7rem; margin: 2px 0; text-align: center; min-height: 20px;"></div>
+            <div class="button-group" style="display: flex; gap: 8px; justify-content: center; margin-top: 2px;">
+                <button id="loginNewsBtn" class="btn-orange">Новости</button>
+                <button id="registerBtn" class="btn-green">Регистрация</button>
+                <button id="loginBtn" class="btn-orange">Войти</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="login-content">
+        <div class="game-description-full">
+            <div class="feature-full"><strong>☕ CoffeeSim — симулятор бизнеса на кофейных автоматах</strong></div>
+            <div class="feature-full">🏭 Реальные модели кофейных автоматов (Jetinno, Saeco, Necta и др.)</div>
+            <div class="feature-full">💰 Полная экономика: налог 6%, эквайринг 1-2%, аренда, электричество, ТО</div>
+            <div class="feature-full">📦 Заказ ингредиентов у поставщиков с реальной доставкой</div>
+            <div class="feature-full">🔄 Заказ от нескольких поставщиков одновременно</div>
+            <div class="feature-full">🏢 Добавление новых поставщиков при создании ингредиентов</div>
+            <div class="feature-full">⏱️ Отмена заказа до доставки — деньги возвращаются</div>
+            <div class="feature-full">📊 Детальная статистика продаж и прибыли по автоматам</div>
+            <div class="feature-full">👥 Реферальная программа — 10% от налогов приглашённых друзей</div>
+            <div class="feature-full">🎁 Реферальный бонус — первый автомат бесплатно по ссылке друга</div>
+            <div class="feature-full">💡 Предлагайте идеи для развития игры</div>
+            <div class="feature-full">📞 По вопросам: <a href="https://t.me/coffeesim_admin" target="_blank" style="color: var(--accent);">@coffeesim_admin</a></div>
+        </div>
+    </div>
+    
+    <footer>
+        <a href="/terms.html" target="_blank" style="color: var(--accent);">Пользовательское соглашение</a> |
+        <a href="/privacy.html" target="_blank" style="color: var(--accent);">Политика конфиденциальности</a>
+    </footer>
+</div>
+
+<div id="gamePanel" class="hidden-init">
+    <div class="app">
+        <div class="header">
+            <div class="top-row">
+                <div class="datetime-panel" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div>
+                        <div id="clockDisplay">--:--:--</div>
+                        <div class="date" id="dateDisplay">--.--.----</div>
+                    </div>
+                    <div id="usernameDisplay" style="font-size: 0.85rem; font-weight: bold; border-left: 1px solid var(--border); padding-left: 12px;"></div>
+                </div>
+                <div class="action-buttons">
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                        <button id="themeToggle" class="theme-toggle">🌓 Тема</button>
+                        <button id="statsBtn" class="btn-blue">📊 Статистика</button>
+                        <button id="profileBtn" class="btn-blue">👤 Профиль</button>
+                        <button id="shareBtn" class="btn-green">📢 Пригласить друзей</button>
+                        <button id="newsBtn" class="btn-orange">Новости</button>
+                      </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                        <button id="suggestionsBtn" class="btn-purple">💡 Идеи</button>
+                        <button id="contactsBtn" class="btn-blue">📞 Контакты</button>
+                        <button id="helpBtn" class="btn-blue">❓ Помощь</button>
+                           <button id="adminSettingsBtn" class="btn-purple" style="display: none;">⚙️ Настройки</button>
+                   <button id="logoutBtn" class="btn-orange">🚪 Выйти</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-main-row">
+                <div class="stats-cards">
+                    <div class="stat-card main-balance">
+                        <div class="stat-label">💰 БАЛАНС</div>
+                        <div class="stat-value" id="balanceVal">0 ₽</div>
+                    </div>
+                    <div class="stat-row-mini">
+                        <div class="stat-card mini">
+                            <div class="stat-label">📈 ДОХОД</div>
+                            <div class="stat-value positive" id="totalIncome">0 ₽</div>
+                        </div>
+                        <div class="stat-card mini">
+                            <div class="stat-label">📉 РАСХОД</div>
+                            <div class="stat-value negative" id="totalExpense">0 ₽</div>
+                        </div>
+                    </div>
+                    <div class="stat-card profit-card" id="profitCard">
+                        <div class="stat-label">⭐ ПРИБЫЛЬ</div>
+                        <div class="stat-value" id="totalProfit">0 ₽</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="coffee-card stats-panel">
+            <div class="filter-bar">
+                <button data-filter="day" class="filter-btn active">📅 День</button>
+                <button data-filter="week" class="filter-btn">📆 Неделя</button>
+                <button data-filter="month" class="filter-btn">🗓️ Месяц</button>
+                <button data-filter="year" class="filter-btn">📅 Год</button>
+                <button id="collapseChartBtn" class="collapse-card-btn">📉 Свернуть</button>
+            </div>
+            <div id="chartContainer" class="chart-collapsible">
+                <div class="chart-wrapper"><canvas id="financeChart"></canvas></div>
+                <table class="stats-table"><thead><tr><th>Период</th><th>💰 Доход</th><th>💸 Расход</th><th>⭐ Прибыль</th><th>🥤 Чашек</th></tr></thead><tbody id="statBody"></tbody></table>
+            </div>
+        </div>
+
+        <!-- ТРИ КОЛОНКИ (всегда видимы) -->
+        <div class="pc-three-columns">
+            <div class="coffee-card">
+                <div class="card-header">
+                    <span>💰 Налог и тарифы</span>
+                </div>
+                <div class="card-body" style="padding: 12px;">
+                    <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <span>📑 Налог:</span>
+                        <input type="number" id="taxPercent" value="6" step="1" style="width: 60px;"> %
+                        <button id="updateTaxBtn" class="btn-sm">✔</button>
+                    </div>
+                    <div id="electricityAdminBlock" style="display: none;">
+                        <div style="font-weight: bold; margin-bottom: 10px;">⚡ Тарифы на электричество (₽/кВт·ч)</div>
+                        <div class="elec-rates-container">
+                            <div class="elec-row"><span class="elec-label">📊 До 3900 кВт·ч</span><div class="elec-inputs"><div class="elec-input-group"><span class="elec-icon">☀️</span><span class="elec-text">лето</span><input type="number" id="elecRate1Summer" value="6.43" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div><div class="elec-input-group"><span class="elec-icon">❄️</span><span class="elec-text">зима</span><input type="number" id="elecRate1Winter" value="7.15" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div></div></div>
+                            <div class="elec-row"><span class="elec-label">📊 3900-6000 кВт·ч</span><div class="elec-inputs"><div class="elec-input-group"><span class="elec-icon">☀️</span><span class="elec-text">лето</span><input type="number" id="elecRate2Summer" value="9.18" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div><div class="elec-input-group"><span class="elec-icon">❄️</span><span class="elec-text">зима</span><input type="number" id="elecRate2Winter" value="10.23" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div></div></div>
+                            <div class="elec-row"><span class="elec-label">📊 Свыше 6000 кВт·ч</span><div class="elec-inputs"><div class="elec-input-group"><span class="elec-icon">☀️</span><span class="elec-text">лето</span><input type="number" id="elecRate3Summer" value="11.05" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div><div class="elec-input-group"><span class="elec-icon">❄️</span><span class="elec-text">зима</span><input type="number" id="elecRate3Winter" value="13.47" step="0.1" class="elec-input"><span style="margin-left: 3px;">₽</span></div></div></div>
+                        </div>
+                        <button id="saveElecRatesBtn" class="btn-sm btn-green" style="margin-top: 12px;">💾 Сохранить</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="coffee-card">
+                <div class="card-header">
+                    <span>📋 Активные заказы</span>
+                </div>
+                <div class="card-body">
+                    <div id="ordersList">Нет активных заказов</div>
+                </div>
+            </div>
+
+            <div class="coffee-card">
+                <div class="card-header">
+                    <span>📅 Расходы</span>
+                </div>
+                <div class="card-body" style="padding: 12px;">
+                    <div id="upcomingExpensesContent">Загрузка...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ТАБЫ: Склад, Меню, Автоматы -->
+        <div class="tabs-container">
+            <div class="tabs-header">
+                <button class="tab-btn active" data-tab="tab-ingredients">📦 Склад</button>
+                <button class="tab-btn" data-tab="tab-drinks">☕ Меню</button>
+                <button class="tab-btn" data-tab="tab-machines">🤖 Автоматы</button>
+            </div>
+            <div class="tabs-content">
+                <div id="tab-ingredients" class="tab-pane active">
+                    <div class="coffee-card">
+                        <div class="card-header">
+                            <span>📦 Склад</span>
+                            <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                                <button id="buyAllIngredientsBtn" class="btn-green btn-sm" style="display: none;">📦 Закупить всё</button>
+                                <button id="addIngredientBtn" class="btn-green btn-sm" style="display: none;">➕ Добавить</button>
+                                <button id="cartBtn" class="btn-orange btn-sm" style="display: none;">🛒 Корзина (<span id="cartCount">0</span>)</button>
+                            </div>
+                        </div>
+                        <div class="card-body" id="ingredientsList">Нет ингредиентов</div>
+                    </div>
+                </div>
+                <div id="tab-drinks" class="tab-pane">
+                    <div class="coffee-card">
+                        <div class="card-header">
+                            <span>☕ Меню</span>
+                            <div style="display: flex; gap: 5px;">
+                                <button id="addDrinkBtn" class="btn-green btn-sm">➕ Добавить</button>
+                            </div>
+                        </div>
+                        <div class="card-body" id="drinksList">Нет напитков</div>
+                    </div>
+                </div>
+                <div id="tab-machines" class="tab-pane">
+                    <div class="coffee-card">
+                        <div class="card-header">
+                            <span>🤖 Автоматы</span>
+                            <div style="display: flex; gap: 5px;">
+                                <button id="buyMachineBtn" class="btn-blue btn-sm">➕ Купить</button>
+                            </div>
+                        </div>
+                        <div class="card-body" id="machinesList">Нет автоматов</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Журнал с кнопкой Свернуть -->
+        <div class="coffee-card" id="logsCard">
+            <div class="card-header">
+                <span>📋 Журнал</span>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <button id="collapseLogsBtn" class="collapse-card-btn btn-sm" data-target="logsContainer">📉 Свернуть</button>
+                    <button id="exportLogsBtnLocal" class="btn-purple btn-sm">📤 Экспорт</button>
+                    <button id="clearLogsBtn" class="btn-red btn-sm">🗑 Очистить</button>
+                </div>
+            </div>
+            <div id="logsContainer" class="logs-container collapsible-logs">Журнал пуст</div>
+        </div>
+
+        <footer>
+            <a href="/terms.html" target="_blank" style="color: var(--accent);">Пользовательское соглашение</a> |
+            <a href="/privacy.html" target="_blank" style="color: var(--accent);">Политика конфиденциальности</a>
+        </footer>
+    </div>
+</div>
+
+<!-- МОДАЛЬНЫЕ ОКНА -->
+<div id="statsModal" class="modal"><div class="modal-content stats-modal-content"><div class="modal-header">📊 Полная статистика</div><div class="modal-body" id="statsModalBody"></div><div style="margin-top:15px; text-align:right;"><button id="closeStatsModal" class="btn-orange">Закрыть</button></div></div></div>
+<div id="exportModal" class="modal"><div class="modal-content"><div class="modal-header">Формат экспорта</div><div style="display:flex;gap:15px;justify-content:center;margin:15px 0;"><label><input type="radio" name="expFormat" value="json" checked> JSON</label><label><input type="radio" name="expFormat" value="csv"> CSV</label><label><input type="radio" name="expFormat" value="txt"> TXT</label></div><div style="display:flex;gap:12px;justify-content:center;"><button id="confirmExportBtn" class="btn-green">Экспорт</button><button id="cancelExportBtn" class="btn-red">Отмена</button></div></div></div>
+<div id="recipeModal" class="modal"><div class="modal-content"><div class="modal-header" id="modalDrinkName">Редактирование рецепта</div><div class="modal-body" id="modalRecipeList"></div><div style="margin-top:15px; text-align:right;"><button id="modalSaveBtn" class="btn-green" onclick="UI.saveRecipeFromModal()">💾 Сохранить</button><button id="modalCancelBtn" class="btn-red" onclick="UI.closeRecipeModal()">Отмена</button></div></div></div>
+<div id="newsModal" class="modal"><div class="modal-content" style="max-width:700px; display: flex; flex-direction: column; height: 80vh;"><div class="modal-header" style="display: flex; justify-content: flex-end; align-items: center; flex-shrink: 0; gap: 8px;"><button id="addNewsFullBtn" class="btn-sm btn-green">➕ Добавить новость</button><button id="closeNewsModal" class="btn-orange btn-sm">Закрыть</button></div><div class="modal-body" id="newsModalBody" style="flex: 1; overflow-y: auto; padding-right: 5px;"></div></div></div>
+<div id="profileModal" class="modal"><div class="modal-content"><div class="modal-header">👤 Личный кабинет</div><div class="modal-body"><div id="profileInfo"></div><div style="margin:15px 0;"><label>Логин:</label><input type="text" id="profileLogin" style="width:100%;"><button id="changeLoginBtn" class="btn-green btn-sm" style="margin-top:5px;">Изменить логин</button></div><hr><div style="margin:15px 0;"><label>Новый пароль:</label><input type="password" id="profileNewPassword" style="width:100%;"><label>Подтверждение:</label><input type="password" id="profileConfirmPassword" style="width:100%; margin-top:5px;"><button id="changePasswordBtn" class="btn-green btn-sm" style="margin-top:5px;">Изменить пароль</button></div><hr><div id="adminContactsBlock" style="margin:15px 0; display:none;"><label>📞 Контакты для связи:</label><textarea id="adminContacts" rows="3" style="width:100%; background:var(--input-bg); color:var(--text-primary); border:1px solid var(--border); border-radius:16px; padding:8px;"></textarea><button id="saveContactsBtn" class="btn-green btn-sm" style="margin-top:5px;">💾 Сохранить</button><div id="contactsMessage" style="margin-top:5px; font-size:0.7rem;"></div></div><hr><div style="display: flex; gap: 10px; justify-content: center; margin: 15px 0;"><button id="exportDataBtnInProfile" class="btn-profile-export">📤 Экспорт</button><button id="resetGameBtnInProfile" class="btn-profile-reset">🔄 Сброс</button><button id="deleteAccountBtn" class="btn-profile-delete">🗑️ Удалить</button></div><div style="margin-top:15px; text-align:right;"><button id="closeProfileModal" class="btn-profile-close">Закрыть</button></div><div id="profileMessage" style="margin-top:10px;"></div></div></div></div>
+<div id="realMachineModal" class="modal"><div class="modal-content" style="max-width:600px;"><div class="modal-header">🤖 Выберите кофейный автомат</div><div class="modal-body" id="realMachineList"></div><div style="margin-top:15px; text-align:right;"><button id="closeRealMachineModal" class="btn-orange">Закрыть</button></div></div></div>
+<div id="suggestionsModal" class="modal"><div class="modal-content" style="max-width:700px;"><div class="modal-header">💡 Предложения и пожелания</div><div class="modal-body" id="suggestionsModalBody"><div style="margin-bottom:15px;"><textarea id="suggestionText" rows="3" style="width:100%; padding:10px; border-radius:16px; background:var(--input-bg); color:var(--text-primary); border:1px solid var(--border);" placeholder="Напишите, что бы вы хотели улучшить или добавить в игру..."></textarea><button id="submitSuggestionBtn" class="btn-green" style="margin-top:8px;">📤 Отправить</button></div><hr><div id="suggestionsList" style="max-height:400px; overflow-y:auto;"></div></div><div style="margin-top:15px; text-align:right;"><button id="closeSuggestionsModal" class="btn-orange">Закрыть</button></div></div></div>
+<div id="contactsModal" class="modal"><div class="modal-content" style="max-width:500px;"><div class="modal-header">📞 Связь с администрацией</div><div class="modal-body" id="contactsModalBody"><div id="contactsContent"></div></div><div style="margin-top:15px; text-align:right;"><button id="closeContactsModal" class="btn-orange">Закрыть</button></div></div></div>
+<div id="helpModal" class="modal"><div class="modal-content" style="max-width:600px;"><div class="modal-header">❓ Помощь — с чего начать?</div><div class="modal-body" style="line-height:1.6;"><h3>☕ Добро пожаловать в CoffeeSim!</h3><p>Это симулятор бизнеса на кофейных автоматах. Ваша цель — развивать сеть автоматов, зарабатывать деньги и расширять бизнес.</p><h4>🚀 С чего начать?</h4><ol><li><strong>Купите первый автомат</strong> — нажмите «Автоматы» → «➕ Купить»</li><li><strong>Закажите ингредиенты у поставщиков</strong> — нажмите «📦 Заказать у поставщиков» у нужного ингредиента, выберите количество и оформите заказ.</li><li><strong>Отслеживайте доставку</strong> — в блоке «Активные заказы» видно, через сколько приедет заказ. Пока заказ не доставлен, его можно отменить — деньги вернутся.</li><li><strong>Настройте меню и цены</strong> — отредактируйте рецепты и установите цену на напитки.</li><li><strong>Ждите продаж</strong> — продажи идут автоматически раз в минуту, зависят от времени суток и количества автоматов.</li></ol><h4>💰 Экономика</h4><ul><li><strong>Налог 6%</strong> — списывается с каждой продажи, накапливается и обнуляется в конце месяца.</li><li><strong>Эквайринг 1-2%</strong> — комиссия за безналичную оплату (99% клиентов платят картой).</li><li><strong>Кредиты</strong> — можно купить автомат в кредит (6/12/24 месяца, ставки 18-25% годовых).</li><li><strong>Ежемесячные расходы</strong> — аренда автоматов, электричество (прогрессивная шкала + сезонность), промывка, ТО списываются в конце месяца.</li><li><strong>Прогрессивные тарифы на электричество</strong> — чем больше автоматов, тем выше стоимость кВт·ч. Зимой тарифы выше.</li></ul><h4>📦 Заказы и доставка</h4><ul><li><strong>Заказ у поставщиков</strong> — выберите ингредиент, укажите количество упаковок, добавьте в корзину и оформите заказ.</li><li><strong>Время доставки</strong> — от 30 минут до 4 часов в зависимости от поставщика.</li><li><strong>Отмена заказа</strong> — пока заказ не доставлен, его можно отменить. Деньги вернутся на баланс.</li><li><strong>Автозакупка</strong> — если на складе заканчиваются ингредиенты, появится окно с предложением купить недостающее.</li></ul><h4>👥 Реферальная программа</h4><ul><li>Нажмите «📢 Пригласить друзей» → скопируйте ссылку → отправьте другу.</li><li>Вы получаете <strong>10% от суммы налогов</strong> приглашённого игрока.</li><li>Бонусы начисляются автоматически, статистика — в разделе «📊 Статистика».</li></ul><h4>🎨 Интерфейс</h4><ul><li><strong>Светлая/тёмная тема</strong> — кнопка «🌓 Тема» вверху.</li><li><strong>Сворачивание блоков</strong> — нажмите «📉 Свернуть» в заголовке любого блока. Состояние сохраняется.</li><li><strong>Адаптивный дизайн</strong> — игра удобна на телефонах и ПК.</li></ul><h4>💡 Полезные советы</h4><ul><li>Следите за остатками на складе — при падении ниже порога блок подсвечивается оранжевым или красным.</li><li>Регулярно проверяйте блок «Расходы в конце месяца» — он показывает предстоящие списания.</li><li>Если баланс низкий, скорректируйте цены на напитки или снизьте аренду автоматов.</li><li>Предлагайте идеи по развитию игры через кнопку «💡 Идеи».</li></ul><p><strong>Удачи в развитии кофейной империи! ☕</strong></p></div><div style="margin-top:15px; text-align:right;"><button id="closeHelpModal" class="btn-orange">Закрыть</button></div></div></div>
+<div id="deficitModal" class="modal"><div class="modal-content" style="max-width: 600px;"><div class="modal-header">⚠️ Внимание! Закончились ингредиенты</div><div class="modal-body" id="deficitModalBody"><div id="deficitList"></div></div><div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end;"><button id="closeDeficitModal" class="btn-orange">Закрыть</button><button id="buySelectedDeficitBtn" class="btn-green">💰 Купить выбранное</button></div></div></div>
+<div id="suppliersModal" class="modal"><div class="modal-content" style="max-width: 1200px; width: 95%;"><div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;"><span>📦 Заказ у поставщиков</span><button id="closeSuppliersModal" class="btn-orange btn-sm">Закрыть</button></div><div class="modal-body" id="suppliersModalBody" style="max-height: 70vh; overflow-y: auto; display: flex; gap: 20px; flex-wrap: wrap;"><div id="suppliersList" style="flex: 2; min-width: 300px; display: flex; flex-direction: column; gap: 12px;"></div><div id="orderCart" style="flex: 1; min-width: 260px; display: none; background: var(--stat-bg); border-radius: 16px; padding: 12px; height: fit-content; position: sticky; top: 0;"><h4 style="margin: 0 0 8px 0;">🛒 Корзина</h4><div id="cartItems" style="max-height: 400px; overflow-y: auto; font-size: 0.8rem;"></div><div id="cartTotal" style="margin-top: 10px;"></div><button id="checkoutOrderBtn" class="btn-green" style="margin-top: 10px; width: 100%;">✅ Оформить заказ</button></div></div></div></div>
+
+<div id="cartOnlyModal" class="modal">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>🛒 Моя корзина</span>
+            <button id="closeCartOnlyModal" class="btn-orange btn-sm">Закрыть</button>
+        </div>
+        <div class="modal-body" id="cartOnlyBody" style="flex: 1; overflow-y: auto; padding: 15px;">
+            <div id="cartOnlyItems" style="min-height: 100px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ДЛЯ СОЗДАНИЯ НАПИТКА -->
+<div id="createDrinkModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">🍹 Создание нового напитка</div>
+        <div class="modal-body">
+            <div style="margin-bottom: 15px;">
+                <label>Название напитка:</label>
+                <input type="text" id="newDrinkName" style="width: 100%; margin-top: 5px; padding: 8px; border-radius: 40px;" placeholder="Например: Латте с карамелью">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Выберите ингредиенты:</label>
+                <div id="ingredientsForDrink" style="max-height: 300px; overflow-y: auto; margin-top: 8px; border: 1px solid var(--border); border-radius: 16px; padding: 10px;"></div>
+            </div>
+            <div id="drinkCostPreview" style="background: var(--stat-bg); border-radius: 16px; padding: 12px; margin-top: 15px;">
+                <div>💰 Себестоимость: <span id="previewCost">0.00</span> ₽</div>
+                <div>📊 Рекомендуемая цена: <span id="previewRecommended">0.00</span> ₽</div>
+                <div>📉 Минимальная цена: <span id="previewMin">0.00</span> ₽</div>
+                <div>📈 Максимальная цена: <span id="previewMax">0.00</span> ₽</div>
+                <div style="margin-top: 10px;">
+                    <label>Установить цену (от мин. до макс.):</label>
+                    <input type="number" id="newDrinkPrice" step="1" style="width: 120px; margin-left: 10px; padding: 5px; border-radius: 40px;"> ₽
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="confirmCreateDrinkBtn" class="btn-green">✅ Создать напиток</button>
+            <button id="cancelCreateDrinkModalBtn" class="btn-red">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ДЛЯ ДОБАВЛЕНИЯ ИНГРЕДИЕНТА / РАСХОДНИКА -->
+<div id="addIngredientModal" class="modal">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header">➕ Добавление товара на склад</div>
+        <div class="modal-body">
+            <div style="margin-bottom: 15px;">
+                <label>📛 Название товара:</label>
+                <input type="text" id="newIngName" style="width: 100%; margin-top: 5px; padding: 8px; border-radius: 40px;" placeholder="Например: Сироп карамельный">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>🏷️ Тип товара:</label>
+                <select id="newIngType" style="width: 100%; margin-top: 5px; padding: 8px; border-radius: 40px;">
+                    <option value="ingredient">☕ Ингредиент</option>
+                    <option value="consumable">🧾 Расходник</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>📏 Единица измерения:</label>
+                <select id="newIngUnit" style="width: 100%; margin-top: 5px; padding: 8px; border-radius: 40px;">
+                    <option value="шт">шт (штуки)</option>
+                    <option value="кг">кг (килограммы)</option>
+                    <option value="л">л (литры)</option>
+                    <option value="мл">мл (миллилитры)</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>📦 Размер партии (упаковки):</label>
+                <input type="number" id="newIngPackSize" value="1" step="0.1" style="width: 100%; margin-top: 5px; padding: 8px; border-radius: 40px;">
+                <small style="font-size: 0.65rem;">Сколько единиц товара в одной закупке</small>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>💰 Цена за единицу (₽):</label>
+                <input type="number" id="newIngPrice" value="0" step="10" style="width: 100%; margin-top: 5px; padding: 8px; border-radius: 40px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>🏢 Поставщик:</label>
+                <select id="newIngSupplier" style="width: 100%; margin-top: 5px; padding: 8px; border-radius: 40px;">
+                    <option value="new">➕ Создать нового поставщика...</option>
+                </select>
+                <small style="font-size: 0.65rem;">Выберите существующего или создайте нового</small>
+            </div>
+            <div id="newSupplierFields" style="display: none; margin-top: 15px; padding: 12px; background: var(--stat-bg); border-radius: 16px;">
+                <div style="font-weight: bold; margin-bottom: 10px;">🏢 Новый поставщик</div>
+                <div style="margin-bottom: 10px;">
+                    <label>Название поставщика:</label>
+                    <input type="text" id="newSupplierName" style="width: 100%; margin-top: 5px; padding: 6px; border-radius: 40px;" placeholder="ООО Новый поставщик">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>🚚 Стоимость доставки (₽):</label>
+                    <input type="number" id="newSupplierDeliveryCost" value="500" step="50" style="width: 100%; margin-top: 5px; padding: 6px; border-radius: 40px;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>🎁 Бесплатная доставка от (ед. товара):</label>
+                    <input type="number" id="newSupplierFreeFrom" value="50" step="10" style="width: 100%; margin-top: 5px; padding: 6px; border-radius: 40px;">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>⏱️ Время доставки (мин - макс):</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="newSupplierTimeMin" value="30" step="10" style="flex: 1; padding: 6px; border-radius: 40px;" placeholder="мин">
+                        <span>-</span>
+                        <input type="number" id="newSupplierTimeMax" value="180" step="10" style="flex: 1; padding: 6px; border-radius: 40px;" placeholder="макс">
+                    </div>
+                </div>
+            </div>
+            <div id="ingredientAlertThresholdBlock" style="margin-bottom: 15px; margin-top: 15px;">
+                <label>📉 Порог оповещения (мин. остаток):</label>
+                <input type="number" id="newIngThreshold" value="1" step="0.1" style="width: 100%; margin-top: 5px; padding: 8px; border-radius: 40px;">
+                <small style="font-size: 0.65rem;">При остатке ниже этого значения ингредиент подсветится</small>
+            </div>
+        </div>
+        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="confirmAddIngredientBtn" class="btn-green">✅ Добавить</button>
+            <button id="cancelAddIngredientBtn" class="btn-red">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== АДМИН-ПАНЕЛЬ (РАСШИРЕННАЯ) ========== -->
+<div id="adminSettingsModal" class="modal">
+    <div class="modal-content" style="max-width: 900px; max-height: 85vh;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>⚙️ Админ-панель</span>
+            <button id="closeAdminSettingsModal" class="btn-orange btn-sm">✖ Закрыть</button>
+        </div>
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- РЯД 1: НАЛОГ + СТАРТОВЫЙ БАЛАНС -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                <div class="admin-card">
+                    <div class="admin-card-title">💰 Налог с продаж</div>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="number" id="adminTaxPercent" value="6" step="1" style="width: 80px;"> %
+                        <button id="adminUpdateTaxBtn" class="btn-sm btn-green">Сохранить</button>
+                    </div>
+                </div>
+                <div class="admin-card">
+                    <div class="admin-card-title">💰 Стартовый баланс (новые игроки)</div>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="number" id="adminStartBalance" value="50000" step="1000" style="width: 120px;"> ₽
+                        <button id="adminSaveStartBalanceBtn" class="btn-sm btn-green">Сохранить</button>
+                    </div>
+                    <div style="font-size: 0.65rem; opacity: 0.7; margin-top: 5px;">⚠️ Только для новых регистраций</div>
+                </div>
+            </div>
+            
+            <!-- РЯД 2: ТАРИФЫ ЭЛЕКТРИЧЕСТВА -->
+            <div class="admin-card">
+                <div class="admin-card-title">⚡ Тарифы на электричество (₽/кВт·ч)</div>
+                <div class="elec-rates-container">
+                    <div class="elec-row">📊 До 3900 кВт·ч: лето <input type="number" id="adminRate1Summer" value="6.43" step="0.1" style="width: 70px;">, зима <input type="number" id="adminRate1Winter" value="7.15" step="0.1" style="width: 70px;"></div>
+                    <div class="elec-row">📊 3900-6000 кВт·ч: лето <input type="number" id="adminRate2Summer" value="9.18" step="0.1" style="width: 70px;">, зима <input type="number" id="adminRate2Winter" value="10.23" step="0.1" style="width: 70px;"></div>
+                    <div class="elec-row">📊 Свыше 6000 кВт·ч: лето <input type="number" id="adminRate3Summer" value="11.05" step="0.1" style="width: 70px;">, зима <input type="number" id="adminRate3Winter" value="13.47" step="0.1" style="width: 70px;"></div>
+                </div>
+                <button id="adminSaveElecRatesBtn" class="btn-sm btn-green" style="margin-top: 12px;">💾 Сохранить тарифы</button>
+            </div>
+            
+            <!-- РЯД 3: КНОПКИ СКЛАДА -->
+            <div class="admin-card">
+                <div class="admin-card-title">📦 Кнопки на складе (видимость)</div>
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <label><input type="checkbox" id="toggleBuyAllBtn"> 📦 Закупить всё</label>
+                    <label><input type="checkbox" id="toggleAddIngredientBtn"> ➕ Добавить ингредиент</label>
+                </div>
+                <div style="font-size: 0.7rem; opacity: 0.7; margin-top: 8px;">💡 Настройки сохраняются автоматически</div>
+            </div>
+            
+            <!-- РЯД 4: УПРАВЛЕНИЕ ИГРОКОМ -->
+            <div class="admin-card">
+                <div class="admin-card-title">👤 Управление игроком</div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <span style="min-width: 100px;">💰 Выдать деньги:</span>
+                        <input type="text" id="adminTargetUsername" placeholder="Логин игрока" style="width: 150px;">
+                        <input type="number" id="adminAddMoneyAmount" placeholder="Сумма" step="1000" style="width: 120px;"> ₽
+                        <button id="adminAddMoneyBtn" class="btn-sm btn-green">➕ Выдать</button>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <span style="min-width: 100px;">🔄 Сбросить игру:</span>
+                        <input type="text" id="adminResetUsername" placeholder="Логин игрока" style="width: 150px;">
+                        <input type="number" id="adminResetBalance" placeholder="Новый баланс" step="1000" style="width: 120px;" value="50000"> ₽
+                        <button id="adminResetGameBtn" class="btn-sm btn-orange">🔄 Сбросить</button>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 5px;">
+                        <button id="adminListUsersBtn" class="btn-sm btn-blue">📋 Показать всех игроков</button>
+                        <button id="adminGlobalMessageBtn" class="btn-sm btn-purple">📢 Глобальное сообщение</button>
+                        <button id="adminViewAllLogsBtn" class="btn-sm btn-blue">📜 Логи всех игроков</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- РЯД 5: БЫСТРОЕ РЕДАКТИРОВАНИЕ ЦЕН -->
+            <div class="admin-card">
+                <div class="admin-card-title">💲 Быстрое редактирование цен</div>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <button id="adminEditIngredientsPricesBtn" class="btn-sm btn-blue">📦 Цены ингредиентов</button>
+                    <button id="adminEditDrinksPricesBtn" class="btn-sm btn-blue">☕ Цены напитков</button>
+                </div>
+                <div id="adminPriceEditorContainer" style="margin-top: 12px; max-height: 300px; overflow-y: auto; display: none;"></div>
+            </div>
+            
+            <!-- РЯД 6: ГЛОБАЛЬНОЕ СООБЩЕНИЕ (форма) -->
+            <div id="adminGlobalMessageForm" style="display: none; background: var(--stat-bg); border-radius: 16px; padding: 12px;">
+                <div class="admin-card-title">📢 Отправить сообщение всем игрокам</div>
+                <textarea id="adminGlobalMessageText" rows="3" style="width: 100%; border-radius: 16px; padding: 8px;" placeholder="Текст сообщения..."></textarea>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button id="adminSendGlobalMessageBtn" class="btn-green">📤 Отправить</button>
+                    <button id="adminCancelGlobalMessageBtn" class="btn-orange">Отмена</button>
+                </div>
+            </div>
+            
+            <!-- РЯД 7: СПИСОК ИГРОКОВ -->
+            <div id="adminUsersListContainer" style="display: none; background: var(--stat-bg); border-radius: 16px; padding: 12px; max-height: 300px; overflow-y: auto;">
+                <div style="font-weight: bold; margin-bottom: 10px;">📋 Список игроков</div>
+                <div id="adminUsersList"></div>
+            </div>
+            
+            <!-- РЯД 8: ЛОГИ ВСЕХ ИГРОКОВ -->
+            <div id="adminAllLogsContainer" style="display: none; background: var(--stat-bg); border-radius: 16px; padding: 12px; max-height: 300px; overflow-y: auto;">
+                <div style="font-weight: bold; margin-bottom: 10px;">📜 Логи всех игроков</div>
+                <div id="adminAllLogsList"></div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('loginPassword');
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            this.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+    }
+
+    function updateDateTime() {
+        const clock = document.getElementById('clockDisplay');
+        const dateSpan = document.getElementById('dateDisplay');
+        if (clock) { const now = new Date(); clock.innerHTML = now.toLocaleTimeString('ru', { hour12: false }); }
+        if (dateSpan) { const now = new Date(); const days = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота']; dateSpan.innerHTML = `${now.toLocaleDateString('ru')} · ${days[now.getDay()]}`; }
+    }
+    updateDateTime();
+    setInterval(updateDateTime, 1000);
+    
+    function showGameUI() {
+        const loginPanel = document.getElementById('loginPanel');
+        const gamePanel = document.getElementById('gamePanel');
+        const loader = document.getElementById('loader');
+        if (loader) loader.style.display = 'none';
+        if (loginPanel) loginPanel.style.display = 'none';
+        if (gamePanel) gamePanel.classList.remove('hidden-init');
+        console.log('✅ Игра загружена');
+    }
+    
+    function showLoginUI() {
+        const loginPanel = document.getElementById('loginPanel');
+        const gamePanel = document.getElementById('gamePanel');
+        const loader = document.getElementById('loader');
+        if (loader) loader.style.display = 'none';
+        if (loginPanel) { loginPanel.style.display = 'flex'; loginPanel.classList.remove('hidden-init'); }
+        if (gamePanel) gamePanel.classList.add('hidden-init');
+        console.log('🔐 Панель входа показана');
+    }
+    
+    window.showGameUI = showGameUI;
+    window.showLoginUI = showLoginUI;
+    
+    // Сворачивание графика
+    const collapseChartBtn = document.getElementById('collapseChartBtn');
+    const chartContainer = document.getElementById('chartContainer');
+    if (collapseChartBtn && chartContainer) {
+        const isChartCollapsed = localStorage.getItem('chartCollapsed') === 'true';
+        if (isChartCollapsed) chartContainer.classList.add('collapsed');
+        collapseChartBtn.innerHTML = isChartCollapsed ? '📈 Развернуть' : '📉 Свернуть';
+        collapseChartBtn.onclick = () => {
+            chartContainer.classList.toggle('collapsed');
+            const nowCollapsed = chartContainer.classList.contains('collapsed');
+            collapseChartBtn.innerHTML = nowCollapsed ? '📈 Развернуть' : '📉 Свернуть';
+            localStorage.setItem('chartCollapsed', nowCollapsed);
+            if (!nowCollapsed && window.Charts?.chart) setTimeout(() => window.Charts.chart.resize(), 100);
+        };
+    }
+    
+    // Сворачивание журнала событий
+    const collapseLogsBtn = document.getElementById('collapseLogsBtn');
+    const logsContainer = document.getElementById('logsContainer');
+    if (collapseLogsBtn && logsContainer) {
+        const isLogsCollapsed = localStorage.getItem('logsCollapsed') === 'true';
+        if (isLogsCollapsed) {
+            logsContainer.style.display = 'none';
+            collapseLogsBtn.innerHTML = '📈 Развернуть';
+        }
+        collapseLogsBtn.onclick = () => {
+            if (logsContainer.style.display === 'none') {
+                logsContainer.style.display = '';
+                collapseLogsBtn.innerHTML = '📉 Свернуть';
+                localStorage.setItem('logsCollapsed', 'false');
+            } else {
+                logsContainer.style.display = 'none';
+                collapseLogsBtn.innerHTML = '📈 Развернуть';
+                localStorage.setItem('logsCollapsed', 'true');
+            }
+        };
+    }
+    
+    // ========== ТАБЫ ==========
+    function initTabs() {
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+                
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabPanes.forEach(p => p.classList.remove('active'));
+                
+                btn.classList.add('active');
+                const activePane = document.getElementById(tabId);
+                if (activePane) activePane.classList.add('active');
+                
+                localStorage.setItem('activeTab', tabId);
+            });
+        });
+        
+        const savedTab = localStorage.getItem('activeTab');
+        if (savedTab) {
+            const savedBtn = document.querySelector(`.tab-btn[data-tab="${savedTab}"]`);
+            if (savedBtn) savedBtn.click();
+        }
+    }
+    
+    // Быстрая загрузка без моргания
+    (async function() {
+        const loader = document.getElementById('loader');
+        const loginPanel = document.getElementById('loginPanel');
+        const gamePanel = document.getElementById('gamePanel');
+        
+        try {
+            const res = await fetch('check_session.php');
+            const data = await res.json();
+            
+            if (data.logged_in) {
+                if (loader) loader.style.display = 'none';
+                if (loginPanel) loginPanel.style.display = 'none';
+                if (gamePanel) gamePanel.classList.remove('hidden-init');
+                if (window.checkSessionAndStart) window.checkSessionAndStart();
+                initTabs();
+            } else {
+                if (loader) loader.style.display = 'none';
+                if (loginPanel) { loginPanel.style.display = 'flex'; loginPanel.classList.remove('hidden-init'); }
+                if (gamePanel) gamePanel.classList.add('hidden-init');
+            }
+        } catch(e) {
+            if (loader) loader.style.display = 'none';
+            if (loginPanel) { loginPanel.style.display = 'flex'; loginPanel.classList.remove('hidden-init'); }
+            if (gamePanel) gamePanel.classList.add('hidden-init');
+        }
+    })();
+</script>
+<script type="module" src="main.js"></script>
+</body>
+</html>
