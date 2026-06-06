@@ -29,16 +29,18 @@ if (!$targetUsername || $newBalance < 0) {
 }
 
 // Найти игрока
-$stmt = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+$stmt = $pdo->prepare("SELECT id, referrer_id FROM users WHERE username = ?");
 $stmt->execute([$targetUsername]);
-$targetId = $stmt->fetchColumn();
+$target = $stmt->fetch(PDO::FETCH_ASSOC);
+$targetId = $target['id'] ?? null;
+$hasReferrer = !empty($target['referrer_id']);
 
 if (!$targetId) {
     echo json_encode(['error' => 'Игрок не найден']);
     exit;
 }
 
-// Создать новую игру из default_state
+// Новая игра из default_state
 $defaultGame = getDefaultState();
 $defaultGame['balance'] = $newBalance;
 $defaultGame['lastSyncTime'] = date('Y-m-d H:i:s');
@@ -50,7 +52,11 @@ $defaultGame['totalCupsSold'] = 0;
 $defaultGame['machines'] = [];
 $defaultGame['machineCounter'] = 1;
 
-// Сброс ингредиентов (обнуляем остатки)
+// Если игрок пришёл по реферальной ссылке — НЕ ДАЁМ бесплатный автомат повторно
+if (!$hasReferrer) {
+    // Можно оставить пустым — автомат не выдаём
+}
+
 foreach ($defaultGame['ingredients'] as &$ing) {
     $ing['stock'] = 0;
     $ing['batches'] = [];
