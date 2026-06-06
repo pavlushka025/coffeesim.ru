@@ -308,38 +308,42 @@ export const UI = {
         this.updateLowStockHighlight(state);
     },
     
-    createIngredientRow: function(ing, threshold) {
-        var div = document.createElement('div');
-        div.className = 'list-item';
-        div.setAttribute('data-id', ing.id);
-        var avgCost = (ing.avgCost !== undefined && ing.avgCost !== null) ? ing.avgCost : ing.currentBuyPrice;
-        var stockDisplay = ing.type === 'consumable' ? Game.formatConsumable(ing.stock) : Game.formatIngredient(ing.stock);
-        
-        var step = ing.unit === 'кг' ? 0.1 : 1;
-        var thresholdUnit = ing.unit;
-        var thresholdValue = threshold;
-        
-        div.innerHTML = `
-            <div class="item-main">
-                <div class="item-title">${this.escapeHtml(ing.name)}</div>
-                <div class="item-sub">📦 <span class="stock-val">${stockDisplay}</span> ${ing.unit}</div>
-               <div class="item-sub">💰 Закупка: ${ing.stock <= 0 ? '—' : Game.formatMoney(ing.currentBuyPrice) + ' ₽/' + ing.unit}</div>
-               <div class="item-sub">📊 Средняя с/с остатка: ${ing.stock <= 0 ? '—' : Game.formatMoney(avgCost) + ' ₽/' + ing.unit}</div>
-            </div>
-            <div class="btn-group">
-                <button class="buy-ing btn-green btn-sm" data-id="${ing.id}" data-name="${this.escapeHtml(ing.name)}" data-unit="${ing.unit}">📦 Заказать у поставщиков</button>
-                <button class="price-chip btn-sm" data-id="${ing.id}" style="display: none;">💰 Цена</button>
-                <button class="del-ing btn-red btn-sm" data-id="${ing.id}">🗑️</button>
-            </div>
-            <div style="display:flex; gap:5px; align-items:center; margin-top:5px;">
-                <span>📉 мин.</span>
-                <input type="number" class="threshold-input" data-id="${ing.id}" value="${thresholdValue}" step="${step}" style="width: 75px;"> 
-                <span style="font-size:0.6rem;">${thresholdUnit}</span>
-                <button class="set-threshold btn-sm" data-id="${ing.id}">✅</button>
-            </div>
-        `;
-        return div;
-    },
+  createIngredientRow: function(ing, threshold) {
+    var div = document.createElement('div');
+    div.className = 'list-item';
+    div.setAttribute('data-id', ing.id);
+    var avgCost = (ing.avgCost !== undefined && ing.avgCost !== null) ? ing.avgCost : ing.currentBuyPrice;
+    var stockDisplay = ing.type === 'consumable' ? Game.formatConsumable(ing.stock) : Game.formatIngredient(ing.stock);
+    
+    var step = ing.unit === 'кг' ? 0.1 : 1;
+    var thresholdUnit = ing.unit;
+    var thresholdValue = threshold;
+    
+    // Показываем цену и себестоимость только если есть остаток
+    var buyPriceDisplay = ing.stock <= 0 ? '—' : Game.formatMoney(ing.currentBuyPrice) + ' ₽/' + ing.unit;
+    var avgCostDisplay = ing.stock <= 0 ? '—' : Game.formatMoney(avgCost) + ' ₽/' + ing.unit;
+    
+    div.innerHTML = `
+        <div class="item-main">
+            <div class="item-title">${this.escapeHtml(ing.name)}</div>
+            <div class="item-sub">📦 <span class="stock-val">${stockDisplay}</span> ${ing.unit}</div>
+            <div class="item-sub">💰 Закупка: ${buyPriceDisplay}</div>
+            <div class="item-sub">📊 Средняя с/с остатка: ${avgCostDisplay}</div>
+        </div>
+        <div class="btn-group">
+            <button class="buy-ing btn-green btn-sm" data-id="${ing.id}" data-name="${this.escapeHtml(ing.name)}" data-unit="${ing.unit}">📦 Заказать у поставщиков</button>
+            <button class="price-chip btn-sm" data-id="${ing.id}" style="display: none;">💰 Цена</button>
+            <button class="del-ing btn-red btn-sm" data-id="${ing.id}">🗑️</button>
+        </div>
+        <div style="display:flex; gap:5px; align-items:center; margin-top:5px;">
+            <span>📉 мин.</span>
+            <input type="number" class="threshold-input" data-id="${ing.id}" value="${thresholdValue}" step="${step}" style="width: 75px;"> 
+            <span style="font-size:0.6rem;">${thresholdUnit}</span>
+            <button class="set-threshold btn-sm" data-id="${ing.id}">✅</button>
+        </div>
+    `;
+    return div;
+},
     
     updateLowStockHighlight: function(state) {
         for (var i = 0; i < state.ingredients.length; i++) {
