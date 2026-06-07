@@ -324,17 +324,31 @@ function initAdminPanel() {
         document.getElementById('adminSettingsModal').classList.add('active');
     };
     
+    // Сохранение налога (глобальное)
     const taxBtn = document.getElementById('adminUpdateTaxBtn');
     if (taxBtn) {
         taxBtn.onclick = async () => {
             const percent = parseFloat(document.getElementById('adminTaxPercent').value);
             if (!isNaN(percent) && percent >= 0 && percent <= 100) {
-                await Game.updateTax(percent);
-                UI.showAutoMessage(`✅ Налог изменён на ${percent}%`, 'success');
+                const res = await fetch('update_global_tax.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tax_percent: percent })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    Game.state.taxPercent = percent;
+                    document.getElementById('taxPercent').value = percent;
+                    UI.updateFinanceUI(Game.state);
+                    UI.showAutoMessage(`✅ Глобальный налог изменён на ${percent}%`, 'success');
+                } else {
+                    UI.showAutoMessage('❌ ' + data.error, 'error');
+                }
             }
         };
     }
     
+    // Сохранение тарифов
     const elecBtn = document.getElementById('adminSaveElecRatesBtn');
     if (elecBtn) {
         elecBtn.onclick = async () => {
@@ -637,6 +651,38 @@ async function loadSuppliersForIngredient(ingredientId, ingredientName, ingredie
     attachCartEvents();
 }
 
+// ========== СИНХРОНИЗАЦИЯ КОРЗИНЫ С КАРТОЧКАМИ ==========
+function updateCartItemQuantity(supplierId, ingredientId, newPacks, packSize) {
+    const supplierIndex = currentCart.findIndex(c => c.supplier_id === supplierId);
+    if (supplierIndex === -1) return;
+    
+    const itemIndex = currentCart[supplierIndex].items.findIndex(i => i.ingredient_id === ingredientId);
+    if (itemIndex === -1) return;
+    
+    if (newPacks <= 0) {
+        currentCart[supplierIndex].items.splice(itemIndex, 1);
+        if (currentCart[supplierIndex].items.length === 0) {
+            currentCart.splice(supplierIndex, 1);
+        }
+    } else {
+        const item = currentCart[supplierIndex].items[itemIndex];
+        item.packs = newPacks;
+        item.quantity = newPacks * packSize;
+        item.totalPrice = item.quantity * item.price;
+    }
+    
+    updateCartDisplay();
+    updateCartCount();
+    
+    const countSpan = document.getElementById(`cart_count_${supplierId}_${ingredientId}`);
+    if (countSpan) {
+        const totalPacks = currentCart[supplierIndex]?.items
+            .filter(i => i.ingredient_id === ingredientId)
+            .reduce((sum, i) => sum + i.packs, 0) || 0;
+        countSpan.innerText = totalPacks > 0 ? totalPacks : '';
+    }
+}
+
 function attachCartEvents() {
     document.querySelectorAll('.qty-minus').forEach(btn => {
         btn.onclick = () => {
@@ -652,6 +698,12 @@ function attachCartEvents() {
                     input.value = val;
                     const packInfo = btn.closest('.supplier-item')?.querySelector('.pack-info');
                     if (packInfo) packInfo.innerText = `(${val * packSize} ${unit})`;
+                    updateCartItemQuantity(supplierId, ingredientId, val, packSize);
+                } else if (val === 1) {
+                    input.value = 0;
+                    const packInfo = btn.closest('.supplier-item')?.querySelector('.pack-info');
+                    if (packInfo) packInfo.innerText = `(0)`;
+                    updateCartItemQuantity(supplierId, ingredientId, 0, packSize);
                 }
             }
         };
@@ -670,6 +722,7 @@ function attachCartEvents() {
                 input.value = val;
                 const packInfo = btn.closest('.supplier-item')?.querySelector('.pack-info');
                 if (packInfo) packInfo.innerText = `(${val * packSize} ${unit})`;
+                updateCartItemQuantity(supplierId, ingredientId, val, packSize);
             }
         };
     });
@@ -724,6 +777,9 @@ function attachCartEvents() {
                 UI.showAutoMessage(`✅ ${name} добавлен (${packs} уп.)`, 'success');
             }
             
+            updateCartDisplay();
+            updateCartCount();
+            
             const countSpan = document.getElementById(`cart_count_${supplierId}_${ingredientId}`);
             if (countSpan) {
                 const totalPacks = supplierInCart.items
@@ -731,9 +787,6 @@ function attachCartEvents() {
                     .reduce((sum, i) => sum + i.packs, 0);
                 countSpan.innerText = totalPacks > 0 ? totalPacks : '';
             }
-            
-            updateCartDisplay();
-            updateCartCount();
         };
     });
 }
@@ -839,21 +892,23 @@ function attachCartMiniEvents() {
             if (supplierIndex !== -1) {
                 const itemIndex = currentCart[supplierIndex].items.findIndex(i => i.ingredient_id === ingredientId);
                 if (itemIndex !== -1) {
-                    currentCart[supplierIndex].items[itemIndex].packs += 1;
-                    const newPacks = currentCart[supplierIndex].items[itemIndex].packs;
+                    const newPacks = currentCart[supplierIndex].items[itemIndex].packs + 1;
+                    currentCart[supplierIndex].items[itemIndex].packs = newPacks;
                     currentCart[supplierIndex].items[itemIndex].quantity = newPacks * packSize;
                     currentCart[supplierIndex].items[itemIndex].totalPrice = currentCart[supplierIndex].items[itemIndex].quantity * price;
                     
                     updateCartDisplay();
                     updateCartCount();
                     
-                    const countSpan = document.getElementById(`cart_count_${supplierId}_${ingredientId}`);
-                    if (countSpan) {
-                        const totalPacks = currentCart[supplierIndex].items
-                            .filter(i => i.ingredient_id === ingredientId)
-                            .reduce((sum, i) => sum + i.packs, 0);
-                        countSpan.innerText = totalPacks > 0 ? totalPacks : '';
+                    const qtyInput = document.getElementById(`qty_${supplierId}_${ingredientId}`);
+                    if (qtyInput) {
+                        qtyInput.value = newPacks;
+                        const packInfo = qtyInput.closest('.supplier-item')?.querySelector('.pack-info');
+                        if (packInfo) packInfo.innerText = `(${newPacks * packSize} ${currentCart[supplierIndex].items[itemIndex].unit})`;
                     }
+                    
+                    const countSpan = document.getElementById(`cart_count_${supplierId}_${ingredientId}`);
+                    if (countSpan) countSpan.innerText = newPacks;
                 }
             }
         };
@@ -879,6 +934,7 @@ function attachCartMiniEvents() {
                         if (currentCart[supplierIndex].items.length === 0) {
                             currentCart.splice(supplierIndex, 1);
                         }
+                        newPacks = 0;
                     } else {
                         currentCart[supplierIndex].items[itemIndex].packs = newPacks;
                         currentCart[supplierIndex].items[itemIndex].quantity = newPacks * packSize;
@@ -888,13 +944,21 @@ function attachCartMiniEvents() {
                     updateCartDisplay();
                     updateCartCount();
                     
-                    const countSpan = document.getElementById(`cart_count_${supplierId}_${ingredientId}`);
-                    if (countSpan) {
-                        const totalPacks = currentCart[supplierIndex]?.items
-                            .filter(i => i.ingredient_id === ingredientId)
-                            .reduce((sum, i) => sum + i.packs, 0) || 0;
-                        countSpan.innerText = totalPacks > 0 ? totalPacks : '';
+                    const qtyInput = document.getElementById(`qty_${supplierId}_${ingredientId}`);
+                    if (qtyInput) {
+                        qtyInput.value = newPacks;
+                        const packInfo = qtyInput.closest('.supplier-item')?.querySelector('.pack-info');
+                        if (packInfo) {
+                            if (newPacks > 0 && currentCart[supplierIndex]?.items[itemIndex]) {
+                                packInfo.innerText = `(${newPacks * packSize} ${currentCart[supplierIndex].items[itemIndex].unit})`;
+                            } else {
+                                packInfo.innerText = `(0)`;
+                            }
+                        }
                     }
+                    
+                    const countSpan = document.getElementById(`cart_count_${supplierId}_${ingredientId}`);
+                    if (countSpan) countSpan.innerText = newPacks > 0 ? newPacks : '';
                 }
             }
         };
@@ -917,13 +981,15 @@ function attachCartMiniEvents() {
                         currentCart.splice(supplierIndex, 1);
                     }
                     
-                    const countSpan = document.getElementById(`cart_count_${supplierId}_${ingredientId}`);
-                    if (countSpan) {
-                        const totalPacks = currentCart[supplierIndex]?.items
-                            .filter(i => i.ingredient_id === ingredientId)
-                            .reduce((sum, i) => sum + i.packs, 0) || 0;
-                        countSpan.innerText = totalPacks > 0 ? totalPacks : '';
+                    const qtyInput = document.getElementById(`qty_${supplierId}_${ingredientId}`);
+                    if (qtyInput) {
+                        qtyInput.value = 0;
+                        const packInfo = qtyInput.closest('.supplier-item')?.querySelector('.pack-info');
+                        if (packInfo) packInfo.innerText = `(0)`;
                     }
+                    
+                    const countSpan = document.getElementById(`cart_count_${supplierId}_${ingredientId}`);
+                    if (countSpan) countSpan.innerText = '';
                 }
             }
             
@@ -952,16 +1018,22 @@ async function checkoutOrder() {
         return;
     }
     
+    document.getElementById('suppliersModal')?.classList.remove('active');
+    document.getElementById('cartOnlyModal')?.classList.remove('active');
+    
     let totalSum = 0;
     let suppliersInfo = [];
+    let allItemsForLog = [];
     
     for (let supplier of currentCart) {
         let supplierTotal = 0;
         let totalUnits = 0;
+        let supplierItemsForLog = [];
         
         for (let item of supplier.items) {
             supplierTotal += item.totalPrice;
             totalUnits += item.quantity;
+            supplierItemsForLog.push(`   ${item.name}: ${item.quantity} ${item.unit} (${Game.formatMoney(item.totalPrice)} ₽)`);
         }
         
         const supplierData = Game.state?.suppliers?.find(s => s.id === supplier.supplier_id);
@@ -979,8 +1051,13 @@ async function checkoutOrder() {
             items: supplier.items,
             delivery_cost: deliveryCost,
             total_cost: grandTotal,
-            supplier_name: supplier.supplier_name
+            supplier_name: supplier.supplier_name,
+            items_log: supplierItemsForLog
         });
+        
+        let deliveryText = deliveryCost === 0 ? 'бесплатно' : Game.formatMoney(deliveryCost) + ' ₽';
+        let supplierBlock = `Поставщик: ${supplier.supplier_name}\n${supplierItemsForLog.join('\n')}\n   🚚 Доставка: ${deliveryText}\n   💰 Итого по поставщику: ${Game.formatMoney(grandTotal)} ₽`;
+        allItemsForLog.push(supplierBlock);
     }
     
     if (Game.state.balance < totalSum) {
@@ -998,16 +1075,25 @@ async function checkoutOrder() {
     }
     
     if (allSuccess) {
-        // Очищаем корзину
+        const transactionDescription = allItemsForLog.join('\n\n') + `\n\n━━━━━━━━━━━━━━━━━━━━\n💰 Сумма заказа: ${Game.formatMoney(totalSum)} ₽`;
+        
+        const transaction = {
+            timestamp: new Date().toISOString(),
+            amount: totalSum,
+            description: transactionDescription,
+            category: 'expense',
+            subcategory: 'order'
+        };
+        Game.state.transactions.unshift(transaction);
+        Game.state.transactionHistory.unshift(transaction);
+        if (Game.state.transactions.length > 500) Game.state.transactions.pop();
+        if (Game.state.transactionHistory.length > 5000) Game.state.transactionHistory.pop();
+        await Game.forceSave();
+        
         currentCart = [];
         updateCartDisplay();
         updateCartCount();
         
-        // Закрываем модальные окна
-        document.getElementById('suppliersModal')?.classList.remove('active');
-        document.getElementById('cartOnlyModal')?.classList.remove('active');
-        
-        // Перезагружаем состояние игры
         const gameData = await API.loadGame();
         Game.updateState(gameData);
         
@@ -1135,6 +1221,13 @@ function attachCartModalEvents() {
                     showCartOnlyModal();
                     updateCartCount();
                     updateCartDisplay();
+                    
+                    const qtyInput = document.getElementById(`qty_${supplierId}_${ingredientId}`);
+                    if (qtyInput) {
+                        qtyInput.value = newPacks;
+                        const packInfo = qtyInput.closest('.supplier-item')?.querySelector('.pack-info');
+                        if (packInfo) packInfo.innerText = `(${newPacks * packSize} ${unit})`;
+                    }
                 }
             }
         };
@@ -1147,6 +1240,7 @@ function attachCartModalEvents() {
             const packSize = parseFloat(btn.dataset.packSize);
             const price = parseFloat(btn.dataset.price);
             const name = btn.dataset.name;
+            const unit = btn.dataset.unit;
             
             const supplierIndex = currentCart.findIndex(c => c.supplier_id === supplierId);
             if (supplierIndex !== -1) {
@@ -1157,10 +1251,10 @@ function attachCartModalEvents() {
                     if (newPacks <= 0) {
                         currentCart[supplierIndex].items.splice(itemIndex, 1);
                         UI.showAutoMessage(`❌ ${name} удалён`, 'error');
-                        
                         if (currentCart[supplierIndex].items.length === 0) {
                             currentCart.splice(supplierIndex, 1);
                         }
+                        newPacks = 0;
                     } else {
                         currentCart[supplierIndex].items[itemIndex].packs = newPacks;
                         currentCart[supplierIndex].items[itemIndex].quantity = newPacks * packSize;
@@ -1170,6 +1264,22 @@ function attachCartModalEvents() {
                     showCartOnlyModal();
                     updateCartCount();
                     updateCartDisplay();
+                    
+                    const qtyInput = document.getElementById(`qty_${supplierId}_${ingredientId}`);
+                    if (qtyInput) {
+                        qtyInput.value = newPacks;
+                        const packInfo = qtyInput.closest('.supplier-item')?.querySelector('.pack-info');
+                        if (packInfo) {
+                            if (newPacks > 0) {
+                                packInfo.innerText = `(${newPacks * packSize} ${unit})`;
+                            } else {
+                                packInfo.innerText = `(0)`;
+                            }
+                        }
+                    }
+                    
+                    const countSpan = document.getElementById(`cart_count_${supplierId}_${ingredientId}`);
+                    if (countSpan) countSpan.innerText = newPacks > 0 ? newPacks : '';
                 }
             }
         };
@@ -1306,7 +1416,6 @@ function renderSuggestions(suggestions, isAdmin) {
         return (order[a.status] || 2) - (order[b.status] || 2);
     });
     
-    // КНОПКИ ФИЛЬТРОВ — ВСЕГДА ПОКАЗЫВАЕМ
     let filtersHtml = '<div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">';
     const filters = [
         { value: 'all', label: '📋 Все' },
@@ -1320,7 +1429,6 @@ function renderSuggestions(suggestions, isAdmin) {
     }
     filtersHtml += '</div>';
     
-    // СПИСОК ПРЕДЛОЖЕНИЙ
     let itemsHtml = '<div id="suggestionsListItems">';
     
     if (sorted.length === 0) {
@@ -1585,7 +1693,6 @@ async function deleteNewsItem(id) {
     }
 }
 
-// ========== ОСНОВНАЯ ЗАГРУЗКА ==========
 async function checkSessionAndStart() {
     try {
         const loggedIn = await API.checkSession();
@@ -1594,6 +1701,24 @@ async function checkSessionAndStart() {
             if (window.showGameUI) window.showGameUI();
             const gameData = await API.loadGame();
             Game.updateState(gameData);
+            
+            // Загружаем глобальные настройки (налог, тарифы)
+            try {
+                const settingsRes = await fetch('get_global_settings.php');
+                const settingsData = await settingsRes.json();
+                if (settingsData.success && settingsData.settings) {
+                    if (settingsData.settings.tax_percent) {
+                        Game.state.taxPercent = parseFloat(settingsData.settings.tax_percent);
+                        document.getElementById('taxPercent').value = Game.state.taxPercent;
+                    }
+                    if (settingsData.settings.electricity_rates) {
+                        Game.state.electricityRates = settingsData.settings.electricity_rates;
+                    }
+                    UI.updateFinanceUI(Game.state);
+                }
+            } catch(e) {
+                console.warn('Ошибка загрузки глобальных настроек:', e);
+            }
             
             const buyAllBtn = document.getElementById('buyAllIngredientsBtn');
             if (buyAllBtn) {
@@ -1605,7 +1730,6 @@ async function checkSessionAndStart() {
                 addIngredientBtn.style.display = isAdminCache ? 'inline-flex' : 'none';
             }
             
-            // Скрываем поле налога для обычных игроков
             const taxPercentInput = document.getElementById('taxPercent');
             const updateTaxBtn = document.getElementById('updateTaxBtn');
             if (taxPercentInput && updateTaxBtn) {
@@ -1733,9 +1857,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     document.getElementById('addDrinkBtn')?.addEventListener('click', () => {
+        console.log('📢 Открываем модальное окно создания напитка');
         if (Game.openCreateDrinkModal) {
             Game.openCreateDrinkModal();
         } else {
+            console.error('❌ Game.openCreateDrinkModal не найден!');
             UI.showAutoMessage('❌ Ошибка: функция создания напитков не загружена', 'error');
         }
     });
@@ -1964,7 +2090,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     document.getElementById('checkoutOrderBtn')?.addEventListener('click', checkoutOrder);
     
-    // Предложения и пожелания
     const suggestionsBtn = document.getElementById('suggestionsBtn');
     const suggestionsModal = document.getElementById('suggestionsModal');
     const closeSuggestionsModal = document.getElementById('closeSuggestionsModal');
@@ -2002,7 +2127,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
-    // Контакты
     const contactsBtn = document.getElementById('contactsBtn');
     const contactsModal = document.getElementById('contactsModal');
     const closeContactsModal = document.getElementById('closeContactsModal');
@@ -2041,7 +2165,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     
-    // Пригласить друзей
     const shareBtn = document.getElementById('shareBtn');
     if (shareBtn) {
         shareBtn.addEventListener('click', async () => {
