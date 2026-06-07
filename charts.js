@@ -30,6 +30,9 @@ export const Charts = {
         const now = new Date();
         let labels = [], incomeData = [], expenseData = [];
 
+        // Исключаем возвраты (refund) из истории для графика
+        const history = (state.transactionHistory || []).filter(t => t.subcategory !== 'refund');
+
         if (Game.activeFilter === 'day') {
             const currentHour = now.getHours();
             for (let i = 0; i <= currentHour; i++) {
@@ -37,7 +40,6 @@ export const Charts = {
                 incomeData.push(0);
                 expenseData.push(0);
             }
-            const history = state.transactionHistory || [];
             for (let i = 0; i < history.length; i++) {
                 const t = history[i];
                 const tDate = new Date(t.timestamp);
@@ -50,22 +52,19 @@ export const Charts = {
                 }
             }
         } else if (Game.activeFilter === 'week') {
-            // Начинаем с понедельника
             const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-            const dayOfWeek = now.getDay(); // 0 = воскресенье
+            const dayOfWeek = now.getDay();
             const startOfWeek = new Date(now);
             const diff = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
             startOfWeek.setDate(now.getDate() - diff);
             startOfWeek.setHours(0, 0, 0, 0);
             
-            // Показываем все 7 дней недели
             for (let i = 0; i < 7; i++) {
                 labels.push(days[i]);
                 incomeData.push(0);
                 expenseData.push(0);
             }
             
-            const history = state.transactionHistory || [];
             for (let i = 0; i < history.length; i++) {
                 const t = history[i];
                 const tDate = new Date(t.timestamp);
@@ -75,7 +74,6 @@ export const Charts = {
                 
                 if (tDate >= weekStart && tDate < weekEnd) {
                     let dayIndex = tDate.getDay();
-                    // Конвертируем: пн=0, вт=1, ..., вс=6
                     dayIndex = dayIndex === 0 ? 6 : dayIndex - 1;
                     if (dayIndex >= 0 && dayIndex < 7) {
                         if (t.category === 'income') incomeData[dayIndex] += t.amount;
@@ -92,7 +90,6 @@ export const Charts = {
                 incomeData.push(0);
                 expenseData.push(0);
             }
-            const history = state.transactionHistory || [];
             for (let i = 0; i < history.length; i++) {
                 const t = history[i];
                 const tDate = new Date(t.timestamp);
@@ -112,7 +109,6 @@ export const Charts = {
                 incomeData.push(0);
                 expenseData.push(0);
             }
-            const history = state.transactionHistory || [];
             for (let i = 0; i < history.length; i++) {
                 const t = history[i];
                 const tDate = new Date(t.timestamp);
